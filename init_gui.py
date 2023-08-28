@@ -159,8 +159,8 @@ def getparams():
     image_image_2 = PhotoImage(file=relative_to_assets_frame0("image_2.png"))
     image_2 = canvas.create_image(96.0, 116.0, image=image_image_2)
 
-    image_image_3 = PhotoImage(file=relative_to_assets_frame0("image_3.png"))
-    image_3 = canvas.create_image(335.0, 107.0, image=image_image_3)
+    #image_image_3 = PhotoImage(file=relative_to_assets_frame0("image_3.png"))
+    #image_3 = canvas.create_image(335.0, 107.0, image=image_image_3)
 
     """------------------------------camera_ID/IP------------------------------"""
     canvas.create_text(
@@ -259,7 +259,6 @@ def getparams():
             ##이미지 경로 수정 8/22 홍택수
             image_image_1 = PhotoImage(file=relative_to_assets_frame2("image_1.png"))
             button_image_1 = PhotoImage(file=relative_to_assets_frame2("button_1.png"))
-
             canvas.create_image(175.0, 161.0, image=image_image_1)
 
             canvas.create_text(85.0, 31.0, anchor="nw", text="DISABLE HIP TRACKER", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
@@ -296,7 +295,7 @@ def getparams():
                         canvas.itemconfigure(toggle_switch, image=toggle_on_image)
                     else:
                         canvas.itemconfigure(toggle_switch, image=toggle_off_image)
-      
+    
 
                 canvas.tag_bind(toggle_switch, "<Button-1>", toggle_action)
 
