@@ -173,8 +173,9 @@ def getparams():
     )
     entry_image_1 = PhotoImage(file=relative_to_assets_frame0("entry_1.png"))
     entry_bg_1 = canvas.create_image(335.5, 244.0, image=entry_image_1)
-    camid = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
-    camid.place(x=209.0, y=222.0, width=253.0, height=42.0)
+    # [8/28 강창범] camera_id param 수정
+    camera_id = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
+    camera_id.place(x=209.0, y=222.0, width=253.0, height=42.0)
 
     """------------------------------camera_width------------------------------"""
     canvas.create_text(
@@ -212,7 +213,7 @@ def getparams():
         camera_height.insert(0, param["camera_height"])
 
     if not param["advanced"]:
-        camid.insert(0, param["camid"])
+        camera_id.insert(0, param["camid"])
 
         camera_width.insert(0, param["camera_width"])
 
@@ -385,6 +386,8 @@ def getparams():
     ignore_hip = param["ignore_hip"]
     camheight = camera_height.get()
     camwidth = camera_width.get()
+    #[8/28 강창범] param camera_id 수정 
+    camid = camera_id.get()
 
     """##VRChatOSC 추가 버튼 관련 숨김 8/14 홍택수
     backend = int(varbackend.get())
@@ -421,7 +424,7 @@ def getparams():
     advanced = param["advanced"]
 
     param = {}
-    param["camid"] = "0"
+    param["camid"] = camid
     param["imgsize"] = maximgsize
     param["neckoffset"] = [0.0, -0.2, 0.1]
     param["prevskel"] = preview_skeleton
