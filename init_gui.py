@@ -155,12 +155,22 @@ def getparams():
 
     image_image_1 = PhotoImage(file=relative_to_assets_frame0("image_1.png"))
     image_1 = canvas.create_image(274.0, 266.0, image=image_image_1)
-
-    image_image_2 = PhotoImage(file=relative_to_assets_frame0("image_2.png"))
-    image_2 = canvas.create_image(96.0, 116.0, image=image_image_2)
-
-    #image_image_3 = PhotoImage(file=relative_to_assets_frame0("image_3.png"))
-    #image_3 = canvas.create_image(335.0, 107.0, image=image_image_3)
+    
+    #=========================================[8/29 강창범]이미지 수정===========================================
+    def center_image(canvas, image):
+        canvas.update()  # 캔버스 업데이트하여 실제 크기를 반영
+        canvas_width = canvas.winfo_width()
+        image_width = image.width()
+        x_position = (canvas_width - image_width) / 2
+        y_position = -100
+        return x_position, y_position
+    image_image_2 = relative_to_assets_frame0("image_2.png")
+    original_image = Image.open(image_image_2)
+    resized_image = original_image.resize((350, 450))  # 원하는 크기로 이미지 크기 조절
+    image_a = ImageTk.PhotoImage(resized_image)
+    # 이미지를 캔버스의 위쪽 가운데에 배치
+    image_2 = canvas.create_image(center_image(canvas, image_a), anchor="nw", image=image_a)
+    #==========================================================================================================
 
     """------------------------------camera_ID/IP------------------------------"""
     canvas.create_text(
