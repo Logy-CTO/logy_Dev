@@ -162,11 +162,11 @@ def getparams():
         canvas_width = canvas.winfo_width()
         image_width = image.width()
         x_position = (canvas_width - image_width) / 2
-        y_position = -100
+        y_position = -80
         return x_position, y_position
     image_image_2 = relative_to_assets_frame0("image_2.png")
     original_image = Image.open(image_image_2)
-    resized_image = original_image.resize((350, 450))  # 원하는 크기로 이미지 크기 조절
+    resized_image = original_image.resize((360, 400))  # 원하는 크기로 이미지 크기 조절
     image_a = ImageTk.PhotoImage(resized_image)
     # 이미지를 캔버스의 위쪽 가운데에 배치
     image_2 = canvas.create_image(center_image(canvas, image_a), anchor="nw", image=image_a)
