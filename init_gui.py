@@ -247,15 +247,49 @@ def getparams():
 
     """==========================새로운 윈도우 띄우기([강창범]8/16)============================="""
     
+    ##gui2 버그 해결 8/31 홍택수 (~352)
+    button_image_1 = PhotoImage(file=relative_to_assets_frame2("button_1.png"))
+    image_image_3 = PhotoImage(file=relative_to_assets_frame2("image_1.png"))
+    
+    def create_toggle_switch(window, canvas, x, y, param_key, param, scale=0.65):
+        toggle_status = BooleanVar()
+        toggle_status.set(param[param_key])
+
+        original_on_image = Image.open(relative_to_assets_frame2("toggle_on.png"))
+        original_off_image = Image.open(relative_to_assets_frame2("toggle_off.png"))
+
+        on_image_resized = original_on_image.resize((round(original_on_image.width * scale), round(original_on_image.height * scale)), Image.LANCZOS)
+        off_image_resized = original_off_image.resize((round(original_off_image.width * scale), round(original_off_image.height * scale)), Image.LANCZOS)
+
+        toggle_on_image = ImageTk.PhotoImage(on_image_resized)
+        toggle_off_image = ImageTk.PhotoImage(off_image_resized)
+
+        toggle_switch = canvas.create_image(x, y, image=toggle_off_image if not toggle_status.get() else toggle_on_image, anchor="nw")
+
+
+        def toggle_action(event):
+            toggle_status.set(not toggle_status.get())
+            param[param_key] = toggle_status.get()
+
+            if toggle_status.get():
+                canvas.itemconfigure(toggle_switch, image=toggle_on_image)
+            else:
+                canvas.itemconfigure(toggle_switch, image=toggle_off_image)
+
+
+        canvas.tag_bind(toggle_switch, "<Button-1>", toggle_action)
+
+        return toggle_switch, toggle_status
+                
     def open_setting_window():
-        global button_image_1 
+
         setting_window = tk.Toplevel(window)
         setting_window.geometry("350x322")
         setting_window.configure(bg="#FFFFFF")
-    
+
         canvas = Canvas(
             setting_window,
-            bg="#8c8c8c",
+            bg="#FFFFFF",
             height=322,
             width=350,
             bd=0,
@@ -263,87 +297,47 @@ def getparams():
             relief="ridge",
         )
         canvas.place(x=0, y=0)
+        canvas.pack() 
+
+        canvas.create_image(175.0, 161.0, image=image_image_3)
+
+        canvas.create_text(85.0, 31.0, anchor="nw", text="DISABLE HIP TRACKER", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
+        canvas.create_text(85.0, 87.0, anchor="nw", text="DEV: SPAWN TRAKER FOR HANDS", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
+        canvas.create_text(85.0, 143.0, anchor="nw", text="DEV: PREVIEW SKELETON IN VR", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
+        canvas.create_text(34.0, 206.0, anchor="nw", text="steam VR", fill="#FFFFFF", font=("Inter", 16 * -1))
+        canvas.create_text(185.0, 207.0, anchor="nw", text="VRchatOSC", fill="#FFFFFF", font=("Inter", 16 * -1))
         
+        toggle_switch_1, varignorehip = create_toggle_switch(window, canvas, x=32, y=28, param_key="ignore_hip", param=param)
+        toggle_switch_2, varusehands = create_toggle_switch(window, canvas, x=32, y=83, param_key="use_hands", param=param)
+        toggle_switch_3, varprevskel = create_toggle_switch(window, canvas, x=32, y=138, param_key="prevskel", param=param)
+
         if param["advanced"]:
-            # ----------------------8/14 홍택수 수정/gui2 section--------------------------------
-            ##이미지 경로 수정 8/22 홍택수
-            image_image_1 = PhotoImage(file=relative_to_assets_frame2("image_1.png"))
-            button_image_1 = PhotoImage(file=relative_to_assets_frame2("button_1.png"))
-            canvas.create_image(175.0, 161.0, image=image_image_1)
+            def create_image_radio_button(window, canvas, on_image_path, off_image_path, x, y, variable, value):
+                on_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2(on_image_path)))
+                off_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2(off_image_path)))
 
-            canvas.create_text(85.0, 31.0, anchor="nw", text="DISABLE HIP TRACKER", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
-            canvas.create_text(85.0, 87.0, anchor="nw", text="DEV: SPAWN TRAKER FOR HANDS", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
-            canvas.create_text(85.0, 143.0, anchor="nw", text="DEV: PREVIEW SKELETON IN VR", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
-            canvas.create_text(34.0, 206.0, anchor="nw", text="steam VR", fill="#FFFFFF", font=("Inter", 16 * -1))
-            canvas.create_text(185.0, 207.0, anchor="nw", text="VRchatOSC", fill="#FFFFFF", font=("Inter", 16 * -1))
+                def toggle_image(event):
+                    if variable.get() != value:
+                        variable.set(value)
+                        update_radio_buttons()
+
+                radio_button = canvas.create_image(x, y, image=off_image, anchor="center")
+                canvas.tag_bind(radio_button, '<Button-1>', toggle_image)
+
+                return radio_button
+
+            varbackend = IntVar(value=1)
+            on_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2("check_on.png")))
+            off_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2("check_off.png")))
             
-            ##이미지에 대한 참조 유지 8/22 홍택수
-            setting_window.image_image_1 = image_image_1
-            setting_window.button_image_1 = button_image_1
-
-            def create_toggle_switch(window, canvas, x, y, param_key, param, scale=0.65):
-                toggle_status = BooleanVar()
-                toggle_status.set(param[param_key])
-
-                original_on_image = Image.open(relative_to_assets_frame2("toggle_on.png"))
-                original_off_image = Image.open(relative_to_assets_frame2("toggle_off.png"))
-
-                on_image_resized = original_on_image.resize((round(original_on_image.width * scale), round(original_on_image.height * scale)), Image.LANCZOS)
-                off_image_resized = original_off_image.resize((round(original_off_image.width * scale), round(original_off_image.height * scale)), Image.LANCZOS)
-
-                toggle_on_image = ImageTk.PhotoImage(on_image_resized)
-                toggle_off_image = ImageTk.PhotoImage(off_image_resized)
-
-                toggle_switch = canvas.create_image(x, y, image=toggle_off_image if not toggle_status.get() else toggle_on_image, anchor="nw")
-
-    
-                def toggle_action(event):
-                    toggle_status.set(not toggle_status.get())
-                    param[param_key] = toggle_status.get()
-
-                    if toggle_status.get():
-                        canvas.itemconfigure(toggle_switch, image=toggle_on_image)
-                    else:
-                        canvas.itemconfigure(toggle_switch, image=toggle_off_image)
-    
-
-                canvas.tag_bind(toggle_switch, "<Button-1>", toggle_action)
-
-                return toggle_switch, toggle_status
-            
-            toggle_switch_1, varignorehip = create_toggle_switch(window, canvas, x=32, y=28, param_key="ignore_hip", param=param)
-            toggle_switch_2, varusehands = create_toggle_switch(window, canvas, x=32, y=83, param_key="use_hands", param=param)
-            toggle_switch_3, varprevskel = create_toggle_switch(window, canvas, x=32, y=138, param_key="prevskel", param=param)
-
-
-        def create_image_radio_button(window, canvas, on_image_path, off_image_path, x, y, variable, value):
-            on_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2(on_image_path)))
-            off_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2(off_image_path)))
-
-            def toggle_image(event):
-                if variable.get() != value:
-                    variable.set(value)
-                    update_radio_buttons()
-
-            radio_button = canvas.create_image(x, y, image=off_image, anchor="center")
-            canvas.tag_bind(radio_button, '<Button-1>', toggle_image)
-
-            return radio_button
-
-        def update_radio_buttons():
-            canvas.itemconfigure(radio_button_steam_vr, image=(on_image if varbackend.get() == 1 else off_image))
-            canvas.itemconfigure(radio_button_vrchat_osc, image=(on_image if varbackend.get() == 2 else off_image))
-
-        varbackend = IntVar(value=1)
-        on_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2("check_on.png")))
-        off_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2("check_off.png")))
-    
-        param["switch_advanced"] = False
-        if param["advanced"]:
             radio_button_steam_vr = create_image_radio_button(window, canvas, "check_on.png", "check_off.png", 125, 215, varbackend, 1)
-            radio_button_vrchat_osc = create_image_radio_button(window, canvas, "check_on.png", "check_off.png", 295, 214, varbackend, 2)   
-            update_radio_buttons()
-        
+            radio_button_vrchat_osc = create_image_radio_button(window, canvas, "check_on.png", "check_off.png", 295, 214, varbackend, 2)
+
+            def update_radio_buttons():
+                canvas.itemconfigure(radio_button_steam_vr, image=(on_image if varbackend.get() == 1 else off_image))
+                canvas.itemconfigure(radio_button_vrchat_osc, image=(on_image if varbackend.get() == 2 else off_image))
+                update_radio_buttons()
+                
         ##버튼 수정 및 이벤트 처리 8/22 홍택수
         button_2 = canvas.create_image(175.5, 282.0, image=button_image_1, anchor="center")
 
@@ -352,22 +346,21 @@ def getparams():
             # 원래 button_1의 command=lambda: set_advanced(setting_window, param)
             setting_window.destroy()
 
-
         # 버튼 이벤트 처리기 (버튼 클릭 시 동작하게 함)
         canvas.tag_bind(button_2, "<Button-1>", button2_action)
         
-
+        setting_window.mainloop()
+        
     # """==================================setting===================================="""
-
-    button_image_1 = PhotoImage(file=relative_to_assets_frame0("button_1.png"))
-    button_1 = Button(
-        image=button_image_1,
+    button_image_3 = PhotoImage(file=relative_to_assets_frame0("button_1.png"))
+    button_3 = Button(
+        image=button_image_3,
         borderwidth=0,
         highlightthickness=0,
         command=open_setting_window,
         relief="flat",
     )
-    button_1.place(x=20.0, y=434.0, width=170.0, height=50.0)
+    button_3.place(x=20.0, y=434.0, width=170.0, height=50.0)
 
     # Button(text='SETTING', command=lambda *args: set_advanced(window, param)).pack()
     button_image_2 = PhotoImage(file=relative_to_assets_frame0("button_2.png"))
