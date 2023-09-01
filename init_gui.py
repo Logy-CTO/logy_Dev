@@ -300,7 +300,6 @@ def getparams():
         canvas.pack() 
 
         canvas.create_image(175.0, 161.0, image=image_image_3)
-
         canvas.create_text(85.0, 31.0, anchor="nw", text="DISABLE HIP TRACKER", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(85.0, 87.0, anchor="nw", text="DEV: SPAWN TRAKER FOR HANDS", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(85.0, 143.0, anchor="nw", text="DEV: PREVIEW SKELETON IN VR", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
@@ -375,7 +374,7 @@ def getparams():
     window.mainloop()
     # ----------------------------------------------------------"
 
-    cameraid = "0"
+    # cameraid = "0"
     # hmd_to_neck_offset = [0.0, -0.2, 0.1]
 
     dont_wait_hmd = False  # bool(varhmdwait.get())
@@ -384,11 +383,14 @@ def getparams():
     # smoothing = True
     feet_rotation = False
 
-    ##param 수정 8/24 홍택수
-    ignore_hip = param["ignore_hip"]
+    ## param 수정 8/24 홍택수
+    # ignore_hip = param["ignore_hip"]
+    # prevskel = param["prevskel"]
+    # use_hands = param["use_hands"]
+    
+    # [8/28 강창범] param camera_id 수정 
     camheight = camera_height.get()
     camwidth = camera_width.get()
-    #[8/28 강창범] param camera_id 수정 
     camid = camera_id.get()
 
     """##VRChatOSC 추가 버튼 관련 숨김 8/14 홍택수
@@ -398,13 +400,12 @@ def getparams():
     """
 
     webui = False
-
+    # ===================[9/1 강창범] param[ignore_hip, use_hands, prevskel] 수정==================
     if param["advanced"]:
         maximgsize = 640
-
-        preview_skeleton = param["ignore_hip"]  ##param 수정 8/24 홍택수
-        use_hands = param["ignore_hip"]  ##param 수정 8/24 홍택수
-
+        #prevskel = False  ##param 수정 8/24 홍택수
+        #use_hands = False  ##param 수정 8/24 홍택수
+        #ignore_hip = False
         mp_smoothing = True
         model_complexity = 1
         min_tracking_confidence = 0.5
@@ -412,24 +413,22 @@ def getparams():
 
     else:
         maximgsize = 640
-
-        preview_skeleton = False
-        use_hands = False
-
+        ignore_hip = param["ignore_hip"]
+        prevskel = param["prevskel"]
+        use_hands = param["use_hands"]
         mp_smoothing = True
         model_complexity = 1
         min_tracking_confidence = 0.5
         static_image = False
 
     switch_advanced = param["switch_advanced"]
-
     advanced = param["advanced"]
-
+    
     param = {}
     param["camid"] = camid
     param["imgsize"] = maximgsize
     param["neckoffset"] = [0.0, -0.2, 0.1]
-    param["prevskel"] = preview_skeleton
+    param["prevskel"] = prevskel # preview_skeleton
     param["waithmd"] = dont_wait_hmd
     param["smooth"] = 0.5
     param["camlatency"] = 0.05
