@@ -53,7 +53,6 @@ def main():
     #making gui
     root = inference_gui.make_inference_gui(params)
     
-
     print("INFO: Starting pose detector...")
 
     #create our detector. These are default parameters as used in the tutorial. 

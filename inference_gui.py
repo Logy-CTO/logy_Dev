@@ -11,16 +11,11 @@ from PIL import Image,ImageTk
 from pathlib import Path
 
 OUTPUT_PATH = Path(__file__).parent
-ASSETS_PATH_FRAME0 = Path("./frame0")
-ASSETS_PATH_FRAME2 = Path("./frame0")
 
-
-def relative_to_assets_frame0(path: str) -> Path:
-    return ASSETS_PATH_FRAME0 / Path(path)
-
+ASSETS_PATH_FRAME1 = Path("./frame1")
 
 def relative_to_assets_frame1(path: str) -> Path:
-    return ASSETS_PATH_FRAME2 / Path(path)
+    return ASSETS_PATH_FRAME1 / Path(path)
 
 ### 9/1 홍택수 ###
 #####토글####
@@ -65,7 +60,7 @@ class InferenceWindow(tk.Frame):
         self.params = params
         params.gui = self       #uhh is this a good idea?
         self.root = root
-        self.update_image()
+        
         #-----
 
         ### 9/1 홍택수 ( ~73 ) ### 
@@ -359,6 +354,7 @@ def make_inference_gui(_params, root=None):
     
     root = tk.Tk()
     InferenceWindow(root,_params).pack(side="top", fill="both", expand=True)
+    
     return root  
     
 if __name__ == "__main__":
