@@ -14,12 +14,12 @@ from helpers import  CameraStream, shutdown, mediapipeTo3dpose, get_rot_mediapip
 from scipy.spatial.transform import Rotation as R
 from backends import DummyBackend, SteamVRBackend, VRChatOSCBackend
 import webui
-from inference_gui import InferenceWindow
+
 import inference_gui
 import parameters
 
 import tkinter as tk
-from queue import Queue
+
 import mediapipe as mp
 
 
@@ -49,15 +49,11 @@ def main():
     print("INFO: Opening camera...")
 
     camera_thread = CameraStream(params)
-    
+
     #making gui
+    root = inference_gui.make_inference_gui(params)
     
-    image_queue = Queue()
-    gui_thread = threading.Thread(target=inference_gui.make_inference_gui,
-                              args=(params, image_queue),
-                              daemon=True)
-    gui_thread.start()
-    
+
     print("INFO: Starting pose detector...")
 
     #create our detector. These are default parameters as used in the tutorial. 
@@ -67,6 +63,7 @@ def main():
                         smooth_landmarks=params.smooth_landmarks, 
                         static_image_mode=params.static_image)
 
+    cv2.namedWindow("out")
 
     #Main program loop:
 
@@ -75,9 +72,6 @@ def main():
 
     prev_smoothing = params.smoothing
     prev_add_smoothing = params.additional_smoothing
-    
-    
-    
 
     while True:
         # Capture frame-by-frame
@@ -115,6 +109,8 @@ def main():
             img = cv2.resize(img, (int(img.shape[1]/ratio),int(img.shape[0]/ratio)))
         
         if params.paused:
+            cv2.imshow("out", img)
+            cv2.waitKey(1)
             continue
         
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -136,7 +132,7 @@ def main():
            
             pose3d[:,0] = -pose3d[:,0]      #flip the points a bit since steamvrs coordinate system is a bit diffrent
             pose3d[:,1] = -pose3d[:,1]
- 
+
             pose3d_og = pose3d.copy()
             params.pose3d_og = pose3d_og
             
@@ -162,8 +158,7 @@ def main():
             
             if not backend.updatepose(params, pose3d, rots, hand_rots):
                 continue
-           
-          
+        
         
         #print(f"Inference time: {time.time()-t0}\nSmoothing value: {smoothing}\n")        #print how long it took to detect and calculate everything
         inference_time = time.time() - t0
@@ -174,15 +169,15 @@ def main():
         img = cv2.cvtColor(img,cv2.COLOR_RGB2BGR)       #convert back to bgr and draw the pose
         mp_drawing.draw_landmarks(
             img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
-        
         img = cv2.putText(img, f"{inference_time:1.3f}, FPS:{int(1/inference_time)}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
-
         
-        image_queue.put(img)           #show image, exit program if we press esc
+        cv2.imshow("out", img)           #show image, exit program if we press esc
+        if cv2.waitKey(1) == 27:
+            backend.disconnect()
+            shutdown(params)
         
-
+        root.mainloop()
 
 if __name__ == "__main__":
-    
     main()
 

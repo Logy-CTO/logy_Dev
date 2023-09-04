@@ -1,25 +1,110 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import Canvas
+from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage, BooleanVar
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from helpers import shutdown, sendToSteamVR
 import cv2
 from PIL import Image,ImageTk
-from queue import Queue
 #use_steamvr = True
+from pathlib import Path
+
+OUTPUT_PATH = Path(__file__).parent
+ASSETS_PATH_FRAME0 = Path("./frame0")
+ASSETS_PATH_FRAME2 = Path("./frame0")
+
+
+def relative_to_assets_frame0(path: str) -> Path:
+    return ASSETS_PATH_FRAME0 / Path(path)
+
+
+def relative_to_assets_frame1(path: str) -> Path:
+    return ASSETS_PATH_FRAME2 / Path(path)
+
+### 9/1 홍택수 ###
+#####토글####
+def create_toggle_switch( canvas, command=None, x=0, y=0, scale=0.71):
+    # 토글 상태 변수 및 이미지 로드
+    toggle_status = BooleanVar()
+    toggle_status.set(False)
+
+    original_on_image = Image.open(relative_to_assets_frame1("toggle_on.png"))
+    original_off_image = Image.open(relative_to_assets_frame1("toggle_off.png"))
+
+    # 이미지 크기 조절
+    on_image_resized = original_on_image.resize((round(original_on_image.width * scale), round(original_on_image.height * scale)), Image.LANCZOS)
+    off_image_resized = original_off_image.resize((round(original_off_image.width * scale), round(original_off_image.height * scale)), Image.LANCZOS)
+
+    toggle_on_image = ImageTk.PhotoImage(on_image_resized)
+    toggle_off_image = ImageTk.PhotoImage(off_image_resized)
+
+    # 토글 이미지 생성 및 위치 설정
+    toggle_switch = canvas.create_image(x, y, image=toggle_off_image, anchor="nw")
+
+    # 토글 동작 함수
+    def toggle_action(event):
+        if command:  # command가 지정되었을 경우 실행합니다.
+            command()
+
+        if toggle_status.get():
+            canvas.itemconfigure(toggle_switch, image=toggle_off_image)
+            toggle_status.set(False)
+        else:
+            canvas.itemconfigure(toggle_switch, image=toggle_on_image)
+            toggle_status.set(True)
+
+    canvas.tag_bind(toggle_switch,"<Button-1>",toggle_action)
+
+    return toggle_switch
 
 class InferenceWindow(tk.Frame):
-    def __init__(self, root, params,queue=None, *args, **kwargs):
-        tk.Frame.__init__(self, root, *args, **kwargs)
+    def __init__(self, root, params, *args, **kwargs):
+        super().__init__(root)  
         
         self.params = params
         params.gui = self       #uhh is this a good idea?
         self.root = root
-        self.queue = queue
+        self.update_image()
         #-----
-        self.canvas = Canvas(root, width=640, height=480)
+
+        ### 9/1 홍택수 ( ~73 ) ### 
+
+        self.canvas = Canvas(
+            bg = "#FFFFFF",
+            height = 756,
+            width = 529,
+            bd = 0,
+            highlightthickness = 0,
+            relief = "ridge"
+        )
+
         self.canvas.pack()
+
+        self.image_image_1 = PhotoImage(
+            file=relative_to_assets_frame1("image_1.png"))
+        self.image_1 = self.canvas.create_image(
+            264.0,
+            378.0,
+            image=self.image_image_1
+        )
+
+        self.image_image_2 = PhotoImage(
+            file=relative_to_assets_frame1("image_2.png"))
+        self.image_2 = self.canvas.create_image(
+            264.0,
+            278.0,
+            image=self.image_image_2
+        )
+
+        self.canvas.create_text(
+            87.0,
+            574.0,
+            anchor="nw",
+            text="PAUSE/UNPAUSE TRACKING",
+            fill="#FFFFFF",
+            font=("Roboto Medium", 14 * -1)
+        )
         #-----
         # calibrate rotation
         self.calib_rot_var = tk.BooleanVar(value=self.params.calib_rot)
@@ -29,8 +114,6 @@ class InferenceWindow(tk.Frame):
         frame1.pack()
         self.calibrate_rotation_frame(frame1)
 
-        self.put_separator()
-
         # calibrate tilt
         self.calib_tilt_var = tk.BooleanVar(value=self.params.calib_tilt)
       
@@ -38,105 +121,80 @@ class InferenceWindow(tk.Frame):
         frame2.pack()
         self.calibrate_tilt_frame(frame2)
 
-        self.put_separator()
-
         # calibrate scale
         self.calib_scale_var = tk.BooleanVar(value=self.params.calib_scale)
-       
 
         frame3 = tk.Frame(self.root)
         frame3.pack()
         self.calibrate_scale_frame(frame3)
 
-        self.put_separator()
+        self.smoothing_1 = 0.5   
+        self.smoothing_2 = 0.5
+        self.ready2exit = self.ready_to_exit
 
+        ### 9/1 홍택수 ( ~114 ) ### 
         # recalibrate
-        tk.Button(self.root, text='Recalibrate (automatically recalibrates checked values above)', 
-                    command=self.autocalibrate).pack()
-                    
+        self.button_image_1 = PhotoImage(
+            file=relative_to_assets_frame1("button_1.png"))
+        button_1 = Button(
+            image=self.button_image_1,
+            borderwidth=0,
+            highlightthickness=0,
+            command=self.autocalibrate,  # 원하는 기능을 수행할 함수를 지정합니다.
+            relief="flat"
+        )
+        button_1.place(
+            x=21.0,
+            y=621.0,
+            width=488.0,
+            height=50.0
+        )
+
+        
+        ### 9/1 홍택수 ###
         # pause tracking
-        tk.Button(self.root, text='Pause/Unpause tracking', 
-                    command=self.pause_tracking).pack()
-                  
+        toggle_switch_button = create_toggle_switch(self.canvas,x=33,y=567,scale=0.71,
+                                            command=self.pause_tracking) 
         
-        # show the Profile 1 profile 2 text:
-        if params.advanced:
-            frame_profile = tk.Frame(self.root)
-            frame_profile.pack()
-            tk.Label(frame_profile, text=" ", width = 20).pack(side='left')
-            tk.Label(frame_profile, text="Profile 1", width = 10).pack(side='left')
-            tk.Label(frame_profile, text=" ", width = 5).pack(side='left')
-            tk.Label(frame_profile, text="Profile 2", width = 10).pack(side='left')
-            tk.Label(frame_profile, text=" ", width = 5).pack(side='left')
-            tk.Label(frame_profile, text=" ", width = 5).pack(side='left')
-
-        # smoothing
-        if params.advanced:
-            frame4 = tk.Frame(self.root)
-            frame4.pack()
-            self.change_smooothing_frame(frame4)
-
-        # smoothing
-        frame4_2 = tk.Frame(self.root)
-        frame4_2.pack()
-        self.change_add_smoothing_frame(frame4_2)
-
-        # smoothing
-        if params.advanced:
-            frame4_1 = tk.Frame(self.root)
-            frame4_1.pack()
-            self.change_cam_lat_frame(frame4_1)
-
-        # rotate image 
-        frame5 = tk.Frame(self.root)
-        frame5.pack()
-        self.change_image_rotation_frame(frame5)
-        
-        # neck offset
-        if params.advanced:
-            frame6 = tk.Frame(self.root)
-            frame6.pack()
-            self.change_neck_offset_frame(frame6)
+    
         
         #frametime log
         self.log_frametime_var = tk.BooleanVar(value=self.params.log_frametime)
        
-
+        ### 9/1 홍택수 ( ~192 ) ### 
         # exit
-        tk.Button(self.root, text='Press to exit', command=self.params.ready2exit).pack()
+        self.button_image_2 = PhotoImage(
+            file=relative_to_assets_frame1("button_2.png"))
+        self.button_2 = Button(
+            image=self.button_image_2,
+            borderwidth=0,
+            highlightthickness=0,
+            command=self.params.ready2exit,
+            relief="flat"
+        )
+        self.button_2.place(
+            x=21.0,
+            y=682.0,
+            width=488.0,
+            height=50.0
+        )
 
+       
+ 
         root.protocol("WM_DELETE_WINDOW", self.params.ready2exit) # when press x
-    #--------
-    def show_frame_on_canvas(self, img):
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(img)
-        img = ImageTk.PhotoImage(image=img)
-        self.canvas.create_image(0, 0, anchor=tk.NW, image=img)
-        self.canvas.image = img
+ 
 
-    def update(self):
-        while not self.queue.empty():
-            img = self.queue.get()
-            self.show_frame_on_canvas(img)
-        self.root.after(1000//60, self.update)  # 60fps로 업데이트   
-    #--------     
-    def change_neck_offset_frame(self,frame):
-        tk.Label(frame, text="HMD to neck offset:", width = 20).pack(side='left')
+        # smoothing_1 and smoothing_2 속성 추가, 초기값으로 임시로 0을 설정했습니다. 
         
-        text1 = tk.Entry(frame, width = 5)
-        text1.pack(side='left')
-        text1.insert(0, self.params.hmd_to_neck_offset[0])
-        
-        text2 = tk.Entry(frame, width = 5)
-        text2.pack(side='left')
-        text2.insert(0, self.params.hmd_to_neck_offset[1])
-        
-        text3 = tk.Entry(frame, width = 5)
-        text3.pack(side='left')
-        text3.insert(0, self.params.hmd_to_neck_offset[2])
 
-        tk.Button(frame, text='Update', command=lambda *args: self.params.change_neck_offset(float(text1.get()),float(text2.get()),float(text3.get()))).pack(side='left')
+    def ready_to_exit(self):  # 메소드 이름 변경
+        self.gui.root.destroy()
 
+    camera_latency = 0   # TODO: Set an appropriate initial value for camera latency
+      
+        
+    hmd_to_neck_offset=[0,0,0]
+    
     def change_log_frametime(self):
         self.params.log_frametime = self.log_frametime_var.get()
         if self.params.log_frametime:
@@ -169,7 +227,6 @@ class InferenceWindow(tk.Frame):
     
     def calibrate_tilt_frame(self, frame):
         
-       
         self.change_tilt_auto()
         
     def change_scale_auto(self):
@@ -179,28 +236,8 @@ class InferenceWindow(tk.Frame):
 
     def calibrate_scale_frame(self, frame):
         
-       
         self.change_scale_auto()
        
-    def change_smooothing_frame(self, frame):
-        
-        tk.Label(frame, text="Smoothing window:", width = 20).pack(side='left')
-        smoothingtext1 = tk.Entry(frame, width = 10)
-        smoothingtext1.pack(side='left')
-        smoothingtext1.insert(0, self.params.smoothing_1)
-
-        tk.Button(frame, text='Update', command=lambda *args: self.params.change_smoothing(float(smoothingtext1.get()),1)).pack(side='left')
-        
-        if self.params.advanced:
-            smoothingtext2 = tk.Entry(frame, width = 10)
-            smoothingtext2.pack(side='left')
-            smoothingtext2.insert(0, self.params.smoothing_2)
-
-            tk.Button(frame, text='Update', command=lambda *args: self.params.change_smoothing(float(smoothingtext2.get()),2)).pack(side='left')
-        
-        tk.Button(frame, text='Disable', command=lambda *args: self.params.change_smoothing(0.0)).pack(side='left')
-
-
     def change_cam_lat_frame(self, frame):
 
         tk.Label(frame, text="Camera latency:", width = 20).pack(side='left')
@@ -318,12 +355,13 @@ class InferenceWindow(tk.Frame):
         self.params.paused = not self.params.paused
 
 
-def make_inference_gui(_params, root=None, _queue=None):
+def make_inference_gui(_params, root=None):
     
     root = tk.Tk()
-    InferenceWindow(root,_params,_queue).pack(side="top", fill="both", expand=True)
-    root.mainloop()
-
+    InferenceWindow(root,_params).pack(side="top", fill="both", expand=True)
+    return root  
+    
 if __name__ == "__main__":
     
-    print("hehe")
+  print("hehe")
+    
