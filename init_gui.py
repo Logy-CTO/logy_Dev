@@ -10,13 +10,13 @@ from sys import platform
 
 import os
 from pathlib import Path
-from tkinter import Tk, Canvas, Button, PhotoImage, BooleanVar, IntVar, Entry
+from tkinter import Tk, Canvas, Button, PhotoImage, BooleanVar, IntVar, Entry, messagebox
 from PIL import Image, ImageTk
 
-button_image_1 = None 
+button_image_1 = None
 OUTPUT_PATH = Path(__file__).parent
-ASSETS_PATH_FRAME0 = Path("./frame0")
-ASSETS_PATH_FRAME2 = Path("./frame2")
+ASSETS_PATH_FRAME0 = OUTPUT_PATH / Path("./assets/frame0")
+ASSETS_PATH_FRAME2 = OUTPUT_PATH / Path("./assets/frame2")
 
 
 def relative_to_assets_frame0(path: str) -> Path:
@@ -47,6 +47,13 @@ canvas = Canvas(
     relief="ridge",
 )
 canvas.place(x=0, y=0)
+
+window.minsize(width = 485, height = 499)
+window.maxsize(width = 485, height = 499)
+
+is_window_opened = False  # 초기에 창이 닫혀 있는 상태로 설정
+setting_window = None
+
 
 # ----------------카메라 인터페이스 추가, 크기 : 320, 240(07/30 국현우)---------------
 
@@ -144,7 +151,7 @@ def getparams():
         param["webui"] = False
     if "switch_advanced" not in param:  ##추가 8/14 홍택수
         param["switch_advanced"] = False
-
+    
     def on_close():
         window.destroy()
         sys.exit("INFO: Exiting... You can close the window after 10 seconds.")
@@ -155,7 +162,7 @@ def getparams():
 
     image_image_1 = PhotoImage(file=relative_to_assets_frame0("image_1.png"))
     image_1 = canvas.create_image(274.0, 266.0, image=image_image_1)
-    
+   
     #=========================================[8/29 강창범]이미지 수정===========================================
     def center_image(canvas, image):
         canvas.update()  # 캔버스 업데이트하여 실제 크기를 반영
@@ -171,6 +178,15 @@ def getparams():
     # 이미지를 캔버스의 위쪽 가운데에 배치
     image_2 = canvas.create_image(center_image(canvas, image_a), anchor="nw", image=image_a)
     #==========================================================================================================
+
+    canvas.create_text(
+        231.0,
+        415.0, 
+        anchor="nw",
+        text="Steam VR을 실행하시고 진행해주세요.", 
+        fill="#FF3333", 
+        font=("SourceSansPro Bold", -11),
+    )
 
     """------------------------------camera_ID/IP------------------------------"""
     canvas.create_text(
@@ -210,6 +226,7 @@ def getparams():
         fill="#E7EFFF",
         font=("SourceSansPro Bold", 18 * -1),
     )
+    
     entry_image_3 = PhotoImage(file=relative_to_assets_frame0("entry_3.png"))
     entry_bg_3 = canvas.create_image(335.5, 377.0, image=entry_image_3)
     camera_height = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
@@ -230,7 +247,7 @@ def getparams():
         camera_height.insert(0, param["camera_height"])
 
     # ==========================================================================================
-
+    
     """
     if not param["advanced"]:
 
@@ -246,11 +263,11 @@ def getparams():
     """
 
     """==========================새로운 윈도우 띄우기([강창범]8/16)============================="""
-    
+   
     ##gui2 버그 해결 8/31 홍택수 (~352)
     button_image_1 = PhotoImage(file=relative_to_assets_frame2("button_1.png"))
     image_image_3 = PhotoImage(file=relative_to_assets_frame2("image_1.png"))
-    
+   
     def create_toggle_switch(window, canvas, x, y, param_key, param, scale=0.65):
         toggle_status = BooleanVar()
         toggle_status.set(param[param_key])
@@ -280,64 +297,78 @@ def getparams():
         canvas.tag_bind(toggle_switch, "<Button-1>", toggle_action)
 
         return toggle_switch, toggle_status
-                
-    def open_setting_window():
+   
+   
+    def on_new_window_close():
+            global is_window_opened
+            is_window_opened = False
 
-        setting_window = tk.Toplevel(window)
-        setting_window.geometry("350x322")
-        setting_window.configure(bg="#FFFFFF")
-
-        canvas = Canvas(
-            setting_window,
-            bg="#FFFFFF",
-            height=322,
-            width=350,
-            bd=0,
-            highlightthickness=0,
-            relief="ridge",
-        )
-        canvas.place(x=0, y=0)
-        canvas.pack() 
+    def open_setting_window():       
+        global is_window_opened, setting_window  # 전역 변수로 창이 열려 있는지 여부를 추적
+            #9/4 홍택수 backend param수정
+        if is_window_opened and setting_window is not None and setting_window.winfo_exists():
+            # 창이 이미 열려 있을 때
+            messagebox.showinfo("Info", "The window is already open")
+        else:
+            # 창이 열려 있지 않을 때
+            is_window_opened = True
+            setting_window = tk.Toplevel(window)
+            setting_window.protocol("WM_DELETE_WINDOW", on_new_window_close)
+           
+            # 창 크기 고정
+            setting_window.minsize(width = 350, height = 322)
+            setting_window.maxsize(width = 350, height = 340)
+           
+            # 아래부터 창 내용을 구성
+            canvas = tk.Canvas(
+                setting_window,
+                bg="#FFFFFF",
+                height=322,
+                width=350,
+                bd=0,
+                highlightthickness=0,
+                relief="ridge",
+            )
+            canvas.place(x=0, y=0)
+            canvas.pack()
 
         canvas.create_image(175.0, 161.0, image=image_image_3)
-
         canvas.create_text(85.0, 31.0, anchor="nw", text="DISABLE HIP TRACKER", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(85.0, 87.0, anchor="nw", text="DEV: SPAWN TRAKER FOR HANDS", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(85.0, 143.0, anchor="nw", text="DEV: PREVIEW SKELETON IN VR", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(34.0, 206.0, anchor="nw", text="steam VR", fill="#FFFFFF", font=("Inter", 16 * -1))
         canvas.create_text(185.0, 207.0, anchor="nw", text="VRchatOSC", fill="#FFFFFF", font=("Inter", 16 * -1))
-        
+       
         toggle_switch_1, varignorehip = create_toggle_switch(window, canvas, x=32, y=28, param_key="ignore_hip", param=param)
         toggle_switch_2, varusehands = create_toggle_switch(window, canvas, x=32, y=83, param_key="use_hands", param=param)
         toggle_switch_3, varprevskel = create_toggle_switch(window, canvas, x=32, y=138, param_key="prevskel", param=param)
+       
+        backend_frame = tk.Frame(setting_window)
+        backend_options_frame = tk.Frame(setting_window)
 
-        if param["advanced"]:
-            def create_image_radio_button(window, canvas, on_image_path, off_image_path, x, y, variable, value):
-                on_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2(on_image_path)))
-                off_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2(off_image_path)))
+        varbackend = tk.IntVar(value = param["backend"])
 
-                def toggle_image(event):
-                    if variable.get() != value:
-                        variable.set(value)
-                        update_radio_buttons()
+        def show_hide_backend_options():
+            if varbackend.get() == 2:
+                backend_options_frame.pack(side=tk.BOTTOM)
+            else:
+                backend_options_frame.pack_forget()  
+               
+        tk.Radiobutton(setting_window, variable = varbackend, value = 1, command = show_hide_backend_options).place(x=115, y=200)
+        tk.Radiobutton(setting_window,  variable = varbackend, value = 2, command = show_hide_backend_options).place(x=280, y=200)
+  
+        #9/4 홍택수 backend param수정 
+        tk.Label(backend_options_frame, text="IP/port:").pack(side = tk.LEFT)
+        backend_ip = tk.Entry(backend_options_frame, width=20)
+        backend_ip.insert(0, param["backend_ip"])
+        backend_ip.pack(side=tk.LEFT)
+        backend_port = tk.Entry(backend_options_frame, width=10)
+        backend_port.insert(0, param["backend_port"])
+        backend_port.pack(side=tk.LEFT)
 
-                radio_button = canvas.create_image(x, y, image=off_image, anchor="center")
-                canvas.tag_bind(radio_button, '<Button-1>', toggle_image)
-
-                return radio_button
-
-            varbackend = IntVar(value=1)
-            on_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2("check_on.png")))
-            off_image = ImageTk.PhotoImage(Image.open(relative_to_assets_frame2("check_off.png")))
-            
-            radio_button_steam_vr = create_image_radio_button(window, canvas, "check_on.png", "check_off.png", 125, 215, varbackend, 1)
-            radio_button_vrchat_osc = create_image_radio_button(window, canvas, "check_on.png", "check_off.png", 295, 214, varbackend, 2)
-
-            def update_radio_buttons():
-                canvas.itemconfigure(radio_button_steam_vr, image=(on_image if varbackend.get() == 1 else off_image))
-                canvas.itemconfigure(radio_button_vrchat_osc, image=(on_image if varbackend.get() == 2 else off_image))
-                update_radio_buttons()
-                
+        show_hide_backend_options()
+        backend_frame.pack()
+                           
         ##버튼 수정 및 이벤트 처리 8/22 홍택수
         button_2 = canvas.create_image(175.5, 282.0, image=button_image_1, anchor="center")
 
@@ -348,9 +379,9 @@ def getparams():
 
         # 버튼 이벤트 처리기 (버튼 클릭 시 동작하게 함)
         canvas.tag_bind(button_2, "<Button-1>", button2_action)
-        
+       
         setting_window.mainloop()
-        
+           
     # """==================================setting===================================="""
     button_image_3 = PhotoImage(file=relative_to_assets_frame0("button_1.png"))
     button_3 = Button(
@@ -375,7 +406,7 @@ def getparams():
     window.mainloop()
     # ----------------------------------------------------------"
 
-    cameraid = "0"
+    # cameraid = "0"
     # hmd_to_neck_offset = [0.0, -0.2, 0.1]
 
     dont_wait_hmd = False  # bool(varhmdwait.get())
@@ -384,27 +415,28 @@ def getparams():
     # smoothing = True
     feet_rotation = False
 
-    ##param 수정 8/24 홍택수
-    ignore_hip = param["ignore_hip"]
+    ## param 수정 8/24 홍택수
+    # ignore_hip = param["ignore_hip"]
+    # prevskel = param["prevskel"]
+    # use_hands = param["use_hands"]
+   
+    # [8/28 강창범] param camera_id 수정
     camheight = camera_height.get()
     camwidth = camera_width.get()
-    #[8/28 강창범] param camera_id 수정 
     camid = camera_id.get()
 
-    ##VRChatOSC 추가 버튼 관련 숨김 8/14 홍택수
-    backend = 1
-    backend_ip_set = "127.0.0.1"
-    backend_port_set = 9000
-   
-
+    #9/4 홍택수 backend param수정 
+    backend = int(varbackend.get())
+    backend_ip_set = backend_ip.get()
+    backend_port_set = int(backend_port.get())
     webui = False
 
+    # ===================[9/1 강창범] param[ignore_hip, use_hands, prevskel] 수정==================
     if param["advanced"]:
         maximgsize = 640
-
-        preview_skeleton = param["ignore_hip"]  ##param 수정 8/24 홍택수
-        use_hands = param["ignore_hip"]  ##param 수정 8/24 홍택수
-
+        #prevskel = False  ##param 수정 8/24 홍택수
+        #use_hands = False  ##param 수정 8/24 홍택수
+        #ignore_hip = False
         mp_smoothing = True
         model_complexity = 1
         min_tracking_confidence = 0.5
@@ -412,24 +444,22 @@ def getparams():
 
     else:
         maximgsize = 640
-
-        preview_skeleton = False
-        use_hands = False
-
+        ignore_hip = param["ignore_hip"]
+        prevskel = param["prevskel"]
+        use_hands = param["use_hands"]
         mp_smoothing = True
         model_complexity = 1
         min_tracking_confidence = 0.5
         static_image = False
 
     switch_advanced = param["switch_advanced"]
-
     advanced = param["advanced"]
    
     param = {}
     param["camid"] = camid
     param["imgsize"] = maximgsize
     param["neckoffset"] = [0.0, -0.2, 0.1]
-    param["prevskel"] = preview_skeleton
+    param["prevskel"] = prevskel # preview_skeleton
     param["waithmd"] = dont_wait_hmd
     param["smooth"] = 0.5
     param["camlatency"] = 0.05
@@ -443,13 +473,11 @@ def getparams():
     param["smooth_landmarks"] = mp_smoothing
     param["static_image"] = static_image
     param["min_tracking_confidence"] = min_tracking_confidence
-
-    
+    ##VRChatOSC 추가 버튼 관련 숨김(param값) 8/14 홍택수
+    #9/4 홍택수 backend param수정
     param["backend"] = backend
     param["backend_ip"] = backend_ip_set
     param["backend_port"] = backend_port_set
-    
-
     param["webui"] = False
 
     if switch_advanced:
