@@ -54,6 +54,10 @@ window.maxsize(width = 485, height = 499)
 is_window_opened = False  # 초기에 창이 닫혀 있는 상태로 설정
 setting_window = None
 
+varbackend = tk.IntVar(value = 1)
+port = 9000
+
+
 
 # ----------------카메라 인터페이스 추가, 크기 : 320, 240(07/30 국현우)---------------
 
@@ -150,8 +154,8 @@ def getparams():
     if "webui" not in param:
         param["webui"] = False
     if "switch_advanced" not in param:  ##추가 8/14 홍택수
-        param["switch_advanced"] = False
-    
+        param["switch_advanced"] = False    
+   
     def on_close():
         window.destroy()
         sys.exit("INFO: Exiting... You can close the window after 10 seconds.")
@@ -162,7 +166,7 @@ def getparams():
 
     image_image_1 = PhotoImage(file=relative_to_assets_frame0("image_1.png"))
     image_1 = canvas.create_image(274.0, 266.0, image=image_image_1)
-   
+
     #=========================================[8/29 강창범]이미지 수정===========================================
     def center_image(canvas, image):
         canvas.update()  # 캔버스 업데이트하여 실제 크기를 반영
@@ -181,10 +185,10 @@ def getparams():
 
     canvas.create_text(
         231.0,
-        415.0, 
+        415.0,
         anchor="nw",
-        text="Steam VR을 실행하시고 진행해주세요.", 
-        fill="#FF3333", 
+        text="Steam VR을 실행하시고 진행해주세요.",
+        fill="#FF3333",
         font=("SourceSansPro Bold", -11),
     )
 
@@ -226,7 +230,7 @@ def getparams():
         fill="#E7EFFF",
         font=("SourceSansPro Bold", 18 * -1),
     )
-    
+   
     entry_image_3 = PhotoImage(file=relative_to_assets_frame0("entry_3.png"))
     entry_bg_3 = canvas.create_image(335.5, 377.0, image=entry_image_3)
     camera_height = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
@@ -247,7 +251,7 @@ def getparams():
         camera_height.insert(0, param["camera_height"])
 
     # ==========================================================================================
-    
+   
     """
     if not param["advanced"]:
 
@@ -263,6 +267,8 @@ def getparams():
     """
 
     """==========================새로운 윈도우 띄우기([강창범]8/16)============================="""
+   
+   
    
     ##gui2 버그 해결 8/31 홍택수 (~352)
     button_image_1 = PhotoImage(file=relative_to_assets_frame2("button_1.png"))
@@ -301,9 +307,11 @@ def getparams():
    
     def on_new_window_close():
             global is_window_opened
-            is_window_opened = False
-
-    def open_setting_window():       
+            is_window_opened = False  
+           
+   
+    def open_setting_window():  
+        global varbackend, port, ip
         global is_window_opened, setting_window  # 전역 변수로 창이 열려 있는지 여부를 추적
             #9/4 홍택수 backend param수정
         if is_window_opened and setting_window is not None and setting_window.winfo_exists():
@@ -338,50 +346,57 @@ def getparams():
         canvas.create_text(85.0, 143.0, anchor="nw", text="DEV: PREVIEW SKELETON IN VR", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(34.0, 206.0, anchor="nw", text="steam VR", fill="#FFFFFF", font=("Inter", 16 * -1))
         canvas.create_text(185.0, 207.0, anchor="nw", text="VRchatOSC", fill="#FFFFFF", font=("Inter", 16 * -1))
-       
+
         toggle_switch_1, varignorehip = create_toggle_switch(window, canvas, x=32, y=28, param_key="ignore_hip", param=param)
         toggle_switch_2, varusehands = create_toggle_switch(window, canvas, x=32, y=83, param_key="use_hands", param=param)
         toggle_switch_3, varprevskel = create_toggle_switch(window, canvas, x=32, y=138, param_key="prevskel", param=param)
-       
+
         backend_frame = tk.Frame(setting_window)
         backend_options_frame = tk.Frame(setting_window)
-
-        varbackend = tk.IntVar(value = param["backend"])
 
         def show_hide_backend_options():
             if varbackend.get() == 2:
                 backend_options_frame.pack(side=tk.BOTTOM)
             else:
                 backend_options_frame.pack_forget()  
-               
         tk.Radiobutton(setting_window, variable = varbackend, value = 1, command = show_hide_backend_options).place(x=115, y=200)
         tk.Radiobutton(setting_window,  variable = varbackend, value = 2, command = show_hide_backend_options).place(x=280, y=200)
-  
-        #9/4 홍택수 backend param수정 
+
+        #9/4 홍택수 backend param수정
         tk.Label(backend_options_frame, text="IP/port:").pack(side = tk.LEFT)
+       
         backend_ip = tk.Entry(backend_options_frame, width=20)
-        backend_ip.insert(0, param["backend_ip"])
         backend_ip.pack(side=tk.LEFT)
+       
         backend_port = tk.Entry(backend_options_frame, width=10)
-        backend_port.insert(0, param["backend_port"])
         backend_port.pack(side=tk.LEFT)
+       
+        if not param["advanced"]:
+            backend_ip.insert(0, param["backend_ip"])
+            backend_port.insert(0, param["backend_port"])
 
         show_hide_backend_options()
         backend_frame.pack()
-                           
+       
         ##버튼 수정 및 이벤트 처리 8/22 홍택수
         button_2 = canvas.create_image(175.5, 282.0, image=button_image_1, anchor="center")
 
-        # 버튼 클릭 액션 정의
+        # 버튼 클릭 액션 정의   9/5 backend_port 해결
         def button2_action(event):
+            ip = backend_ip.get()
+            param["backend_ip"] = ip
+
+            port = backend_port.get()
+            param["backend_port"] = port
+
             # 원래 button_1의 command=lambda: set_advanced(setting_window, param)
             setting_window.destroy()
 
         # 버튼 이벤트 처리기 (버튼 클릭 시 동작하게 함)
         canvas.tag_bind(button_2, "<Button-1>", button2_action)
-       
+   
         setting_window.mainloop()
-           
+       
     # """==================================setting===================================="""
     button_image_3 = PhotoImage(file=relative_to_assets_frame0("button_1.png"))
     button_3 = Button(
@@ -419,16 +434,16 @@ def getparams():
     # ignore_hip = param["ignore_hip"]
     # prevskel = param["prevskel"]
     # use_hands = param["use_hands"]
-   
+
     # [8/28 강창범] param camera_id 수정
     camheight = camera_height.get()
     camwidth = camera_width.get()
     camid = camera_id.get()
 
-    #9/4 홍택수 backend param수정 
+    #9/4 홍택수 backend param수정
     backend = int(varbackend.get())
-    backend_ip_set = backend_ip.get()
-    backend_port_set = int(backend_port.get())
+    backend_ip_set = param["backend_ip"]
+    backend_port_set = param["backend_port"]
     webui = False
 
     # ===================[9/1 강창범] param[ignore_hip, use_hands, prevskel] 수정==================
@@ -454,7 +469,7 @@ def getparams():
 
     switch_advanced = param["switch_advanced"]
     advanced = param["advanced"]
-   
+
     param = {}
     param["camid"] = camid
     param["imgsize"] = maximgsize
