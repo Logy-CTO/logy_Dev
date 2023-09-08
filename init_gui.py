@@ -359,8 +359,17 @@ def getparams():
                 backend_options_frame.pack(side=tk.BOTTOM)
             else:
                 backend_options_frame.pack_forget()  
-        tk.Radiobutton(setting_window, variable = varbackend, value = 1, command = show_hide_backend_options).place(x=115, y=200)
-        tk.Radiobutton(setting_window,  variable = varbackend, value = 2, command = show_hide_backend_options).place(x=280, y=200)
+
+        frame = tk.Frame(setting_window)
+        frame.pack()
+
+        rb1 = tk.Radiobutton(setting_window,variable=varbackend, value=1, command=show_hide_backend_options)
+        rb1.config(bg="#2d3550",activebackground="#2d3550", selectcolor="white")
+        rb1.place(x=115, y=202)
+
+        rb2 = tk.Radiobutton(setting_window,variable=varbackend, value=2, command=show_hide_backend_options)
+        rb2.config(bg="#202943", activebackground="#202943", selectcolor="white")
+        rb2.place(x=280,y =202)
 
         #9/4 홍택수 backend param수정
         tk.Label(backend_options_frame, text="IP/port:").pack(side = tk.LEFT)
