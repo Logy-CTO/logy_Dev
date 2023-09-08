@@ -15,13 +15,13 @@ from scipy.spatial.transform import Rotation as R
 from backends import DummyBackend, SteamVRBackend, VRChatOSCBackend
 import webui
 
-import inference_gui
+from inference_gui import make_inference_gui
 import parameters
 
 import tkinter as tk
 
 import mediapipe as mp
-
+lock = threading.Lock()
 
 def main():
     mp_drawing = mp.solutions.drawing_utils
@@ -51,7 +51,8 @@ def main():
     camera_thread = CameraStream(params)
 
     #making gui
-    root = inference_gui.make_inference_gui(params)
+    gui_window = make_inference_gui(params, camera_thread)
+    
     
     print("INFO: Starting pose detector...")
 
@@ -62,7 +63,7 @@ def main():
                         smooth_landmarks=params.smooth_landmarks, 
                         static_image_mode=params.static_image)
 
-    cv2.namedWindow("out")
+    
 
     #Main program loop:
 
@@ -92,8 +93,13 @@ def main():
             continue
 
         #some may say I need a mutex here. I say this works fine.
-        img = camera_thread.image_from_thread.copy() 
-        camera_thread.image_ready = False         
+        def update_image_from_main():
+            with lock:
+                img = camera_thread.image_from_thread.copy()
+                camera_thread.image_ready = False
+                gui_window.update_image(img)
+            
+        gui_window.update_func = update_image_from_main        
         
         #if set, rotate the image
         if params.rotate_image is not None:       
@@ -108,8 +114,7 @@ def main():
             img = cv2.resize(img, (int(img.shape[1]/ratio),int(img.shape[0]/ratio)))
         
         if params.paused:
-            cv2.imshow("out", img)
-            cv2.waitKey(1)
+            
             continue
         
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -170,12 +175,8 @@ def main():
             img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
         img = cv2.putText(img, f"{inference_time:1.3f}, FPS:{int(1/inference_time)}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
         
-        cv2.imshow("out", img)           #show image, exit program if we press esc
-        if cv2.waitKey(1) == 27:
-            backend.disconnect()
-            shutdown(params)
+    
         
-        root.mainloop()
 
 if __name__ == "__main__":
     main()

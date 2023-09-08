@@ -9,7 +9,8 @@ import cv2
 from PIL import Image,ImageTk
 #use_steamvr = True
 from pathlib import Path
-
+import threading
+lock = threading.Lock()
 OUTPUT_PATH = Path(__file__).parent
 
 ASSETS_PATH_FRAME1 = Path("./frame1")
@@ -60,7 +61,12 @@ class InferenceWindow(tk.Frame):
         self.params = params
         params.gui = self       #uhh is this a good idea?
         self.root = root
+        self.canvas_width = 640  # Or whatever size you want.
+        self.canvas_height = 480 
         
+
+        # Update canvas with video frames.
+       
         #-----
 
         ### 9/1 홍택수 ( ~73 ) ### 
@@ -83,15 +89,7 @@ class InferenceWindow(tk.Frame):
             378.0,
             image=self.image_image_1
         )
-
-        self.image_image_2 = PhotoImage(
-            file=relative_to_assets_frame1("image_2.png"))
-        self.image_2 = self.canvas.create_image(
-            264.0,
-            278.0,
-            image=self.image_image_2
-        )
-
+       
         self.canvas.create_text(
             87.0,
             574.0,
@@ -178,9 +176,22 @@ class InferenceWindow(tk.Frame):
  
         root.protocol("WM_DELETE_WINDOW", self.params.ready2exit) # when press x
  
-
-        # smoothing_1 and smoothing_2 속성 추가, 초기값으로 임시로 0을 설정했습니다. 
         
+    def update_image(self, img):
+        image_pil_format = Image.fromarray(img)
+        self.image_tkinter_format = ImageTk.PhotoImage(image_pil_format)
+
+        # Clear the canvas and put a new image on it.
+        self.canvas.delete("all")
+        self.canvas.create_image(264.0, 278.0, image=self.image_tkinter_format, anchor='nw')
+        self.root.after(15, self.update_from_main)
+
+    def update_from_main(self):
+        if hasattr(self, 'update_func'):
+            self.update_func()
+        self.root.update_idletasks()
+        self.root.update()
+ 
 
     def ready_to_exit(self):  # 메소드 이름 변경
         self.gui.root.destroy()
@@ -351,11 +362,9 @@ class InferenceWindow(tk.Frame):
 
 
 def make_inference_gui(_params, root=None):
-    
     root = tk.Tk()
-    InferenceWindow(root,_params).pack(side="top", fill="both", expand=True)
-    
-    return root  
+    InferenceWindow(root, _params).pack(side="top", fill="both", expand=True)
+    root.mainloop()
     
 if __name__ == "__main__":
     
