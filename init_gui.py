@@ -15,8 +15,8 @@ from PIL import Image, ImageTk
 
 button_image_1 = None
 OUTPUT_PATH = Path(__file__).parent
-ASSETS_PATH_FRAME0 = OUTPUT_PATH / Path("./assets/frame0")
-ASSETS_PATH_FRAME2 = OUTPUT_PATH / Path("./assets/frame2")
+ASSETS_PATH_FRAME0 =  Path("./frame0")
+ASSETS_PATH_FRAME2 =  Path("./frame2")
 
 
 def relative_to_assets_frame0(path: str) -> Path:
@@ -359,17 +359,8 @@ def getparams():
                 backend_options_frame.pack(side=tk.BOTTOM)
             else:
                 backend_options_frame.pack_forget()  
-
-        frame = tk.Frame(setting_window)
-        frame.pack()
-
-        rb1 = tk.Radiobutton(setting_window,variable=varbackend, value=1, command=show_hide_backend_options)
-        rb1.config(bg="#2d3550",activebackground="#2d3550", selectcolor="white")
-        rb1.place(x=115, y=202)
-
-        rb2 = tk.Radiobutton(setting_window,variable=varbackend, value=2, command=show_hide_backend_options)
-        rb2.config(bg="#202943", activebackground="#202943", selectcolor="white")
-        rb2.place(x=280,y =202)
+        tk.Radiobutton(setting_window, variable = varbackend, value = 1, command = show_hide_backend_options).place(x=115, y=200)
+        tk.Radiobutton(setting_window,  variable = varbackend, value = 2, command = show_hide_backend_options).place(x=280, y=200)
 
         #9/4 홍택수 backend param수정
         tk.Label(backend_options_frame, text="IP/port:").pack(side = tk.LEFT)

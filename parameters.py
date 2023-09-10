@@ -15,8 +15,11 @@ class Parameters():
         self.smooth_landmarks = param["smooth_landmarks"]
         self.min_tracking_confidence = param["min_tracking_confidence"]
         self.static_image = param["static_image"]
-
+        
         #PARAMETERS:
+        #-----------------------
+        self.new_image_available = False
+        #------------------------
         self.maximgsize = param["imgsize"]               #to prevent working with huge images, images that have one axis larger than this value will be downscaled.
         self.cameraid = param["camid"]                    #to use with an usb or virtual webcam. If 0 doesnt work/opens wrong camera, try numbers 1-5 or so
         #cameraid = "http://192.168.1.102:8080/video"   #to use ip webcam, uncomment this line and change to your ip
