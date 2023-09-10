@@ -5,11 +5,12 @@ from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage, BooleanVar
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from helpers import shutdown, sendToSteamVR
-import cv2
 from PIL import Image,ImageTk
 #use_steamvr = True
 from pathlib import Path
 import threading
+import cv2
+
 lock = threading.Lock()
 OUTPUT_PATH = Path(__file__).parent
 
@@ -178,8 +179,8 @@ class InferenceWindow(tk.Frame):
  
         
     def update_image(self, img):
-        image_pil_format = Image.fromarray(img)
-        self.image_tkinter_format = ImageTk.PhotoImage(image_pil_format)
+        image_pil_format = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
+        self.image_tkinter_format = ImageTk.PhotoImage(image=image_pil_format)
 
         # Clear the canvas and put a new image on it.
         self.canvas.delete("all")
@@ -187,11 +188,14 @@ class InferenceWindow(tk.Frame):
         self.root.after(15, self.update_from_main)
 
     def update_from_main(self):
+        # 여기서 OpenCV로부터 이미지를 가져와 update_image 메서드를 호출합니다.
+        # 예: img = capture_from_opencv()
+        # self.update_image(img)
+        
         if hasattr(self, 'update_func'):
             self.update_func()
         self.root.update_idletasks()
         self.root.update()
- 
 
     def ready_to_exit(self):  # 메소드 이름 변경
         self.gui.root.destroy()

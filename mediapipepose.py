@@ -170,7 +170,7 @@ def main():
         if params.log_frametime:
             print(f"INFO: Inference time: {inference_time}")
         
-        img = cv2.cvtColor(img,cv2.COLOR_RGB2BGR)       #convert back to bgr and draw the pose
+               #convert back to bgr and draw the pose
         mp_drawing.draw_landmarks(
             img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
         img = cv2.putText(img, f"{inference_time:1.3f}, FPS:{int(1/inference_time)}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
