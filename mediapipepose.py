@@ -188,31 +188,18 @@ class InferenceWindow(tk.Frame):
         root.protocol("WM_DELETE_WINDOW", self.params.ready2exit) # when press x
  
         
-    def update_image(self, img):
-        image_pil_format = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
-        self.image_tkinter_format = ImageTk.PhotoImage(image=image_pil_format)
-
-        # Clear the canvas and put a new image on it.
-        self.canvas.delete("all")
-        self.canvas.create_image(264.0, 278.0, image=self.image_tkinter_format, anchor='nw')
-        self.root.after(15, self.update_from_main)
-
-    def update_from_main(self):
-        # 여기서 OpenCV로부터 이미지를 가져와 update_image 메서드를 호출합니다.
-        # 예: img = capture_from_opencv()
-        # self.update_image(img)
-        
-        if hasattr(self, 'update_func'):
-            self.update_func()
-        self.root.update_idletasks()
-        self.root.update()
-
-    def ready_to_exit(self):  # 메소드 이름 변경
-        self.gui.root.destroy()
+    def update_image(self, color):
+        if color is not None:
+            image = cv2.cvtColor(color, cv2.COLOR_BGR2RGB)
+            image_pil_format = Image.fromarray(image)
+            self.image_tkinter_format = ImageTk.PhotoImage(image=image_pil_format)
+            self.canvas.delete("all")
+            self.canvas.create_image(264.0, 278.0, image=self.image_tkinter_format, anchor='nw')
+            self.root.update_idletasks()
+            self.root.update()
 
     camera_latency = 0   # TODO: Set an appropriate initial value for camera latency
       
-        
     hmd_to_neck_offset=[0,0,0]
     
     def change_log_frametime(self):
@@ -403,7 +390,9 @@ def main():
     camera_thread = CameraStream(params)
 
     #making gui
-
+    root = tk.Tk()
+    params = parameters.Parameters()
+    gui = InferenceWindow(root, params)
     
     print("INFO: Starting pose detector...")
 
@@ -425,6 +414,7 @@ def main():
     prev_add_smoothing = params.additional_smoothing
 
     while True:
+        gui.update_image(img)
         # Capture frame-by-frame
         if params.exit_ready:
             shutdown(params)
@@ -518,6 +508,7 @@ def main():
         mp_drawing.draw_landmarks(
             img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
         img = cv2.putText(img, f"{inference_time:1.3f}, FPS:{int(1/inference_time)}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
+        cv2.waitKey(1)
         
     
         
