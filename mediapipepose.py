@@ -1,24 +1,20 @@
 print("Importing libraries...")
 import os
 import sys
-sys.path.append(os.getcwd())    #embedable python doesnt find local modules without this line
+sys.path.append(os.getcwd())
 import time
 import threading
 import cv2
 import numpy as np
 import tkinter as tk
-from tkinter import ttk
-from tkinter import Canvas
-from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage, BooleanVar
-from helpers import  CameraStream, shutdown, mediapipeTo3dpose, get_rot_mediapipe, get_rot_hands,  get_rot,sendToSteamVR
+from tkinter import ttk, Canvas, Entry, Text, Button, PhotoImage, BooleanVar
+from helpers import CameraStream, shutdown, mediapipeTo3dpose, get_rot_mediapipe, get_rot_hands, get_rot, sendToSteamVR
 from scipy.spatial.transform import Rotation as R
 from backends import DummyBackend, SteamVRBackend, VRChatOSCBackend
 import webui
 from pathlib import Path
 import parameters
-from PIL import Image,ImageTk
-import tkinter as tk
-from helpers import shutdown, sendToSteamVR
+from PIL import Image, ImageTk
 import mediapipe as mp
 
 
@@ -91,7 +87,7 @@ class InferenceWindow(tk.Frame):
             relief = "ridge"
         )
 
-        self.canvas.pack()
+        
 
         self.image_image_1 = PhotoImage(
             file=relative_to_assets_frame1("image_1.png"))
@@ -183,8 +179,10 @@ class InferenceWindow(tk.Frame):
             height=50.0
         )
 
-       
- 
+        self.canvas.pack()
+
+        self.pack()
+        
         root.protocol("WM_DELETE_WINDOW", self.params.ready2exit) # when press x
  
         
@@ -197,6 +195,7 @@ class InferenceWindow(tk.Frame):
             self.canvas.create_image(264.0, 278.0, image=self.image_tkinter_format, anchor='nw')
             self.root.update_idletasks()
             self.root.update()
+            
 
     camera_latency = 0   # TODO: Set an appropriate initial value for camera latency
       
@@ -361,59 +360,8 @@ class InferenceWindow(tk.Frame):
             print("INFO: Pose estimation unpaused") 
         self.params.paused = not self.params.paused
     
+def process_image(gui, params, camera_thread, pose, backend, mp_drawing, mp_pose, root):
     
-def main():
-    mp_drawing = mp.solutions.drawing_utils
-    mp_pose = mp.solutions.pose
-
-    use_steamvr = True
-    
-    print("INFO: Reading parameters...")
-
-    params = parameters.Parameters()
-    
-    if params.webui:
-        webui_thread = threading.Thread(target=webui.start_webui, args=(params,), daemon=True)
-        webui_thread.start()
-    else:
-        print("INFO: WebUI disabled in parameters")
-
-    backends = { 0: DummyBackend, 1: SteamVRBackend, 2: VRChatOSCBackend }
-    backend = backends[params.backend]()
-    backend.connect(params)
-
-    if params.exit_ready:
-        sys.exit("INFO: Exiting... You can close the window after 10 seconds.")
-
-    print("INFO: Opening camera...")
-
-    camera_thread = CameraStream(params)
-
-    #making gui
-    root = tk.Tk()
-    params = parameters.Parameters()
-    gui = InferenceWindow(root, params)
-    
-    print("INFO: Starting pose detector...")
-
-    #create our detector. These are default parameters as used in the tutorial. 
-    pose = mp_pose.Pose(model_complexity=params.model, 
-                        min_detection_confidence=0.5, 
-                        min_tracking_confidence=params.min_tracking_confidence, 
-                        smooth_landmarks=params.smooth_landmarks, 
-                        static_image_mode=params.static_image)
-
-    
-
-    #Main program loop:
-
-    rotation = 0
-    i = 0
-
-    prev_smoothing = params.smoothing
-    prev_add_smoothing = params.additional_smoothing
-
-    while True:
         gui.update_image(img)
         # Capture frame-by-frame
         if params.exit_ready:
@@ -431,7 +379,10 @@ def main():
         #wait untill camera thread captures another image
         if not camera_thread.image_ready:     
             time.sleep(0.001)
-            continue
+            return
+        
+        img = camera_thread.image_from_thread.copy() 
+        camera_thread.image_ready = False
 
         #some may say I need a mutex here. I say this works fine.
         
@@ -449,7 +400,7 @@ def main():
         
         if params.paused:
             
-            continue
+            return
         
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
@@ -495,7 +446,7 @@ def main():
             #i+=1
             
             if not backend.updatepose(params, pose3d, rots, hand_rots):
-                continue
+                return
         
         
         #print(f"Inference time: {time.time()-t0}\nSmoothing value: {smoothing}\n")        #print how long it took to detect and calculate everything
@@ -508,7 +459,70 @@ def main():
         mp_drawing.draw_landmarks(
             img, results.pose_landmarks, mp_pose.POSE_CONNECTIONS)
         img = cv2.putText(img, f"{inference_time:1.3f}, FPS:{int(1/inference_time)}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 1, cv2.LINE_AA)
-        cv2.waitKey(1)
+        root.after(10, process_image, gui, params, camera_thread, pose, backend, mp_drawing, mp_pose, root)
+        
+        
+def main():
+    mp_drawing = mp.solutions.drawing_utils
+    mp_pose = mp.solutions.pose
+
+    use_steamvr = True
+    
+    print("INFO: Reading parameters...")
+
+    params = parameters.Parameters()
+    
+    if params.webui:
+        webui_thread = threading.Thread(target=webui.start_webui, args=(params,), daemon=True)
+        webui_thread.start()
+    else:
+        print("INFO: WebUI disabled in parameters")
+
+    backends = { 0: DummyBackend, 1: SteamVRBackend, 2: VRChatOSCBackend }
+    backend = backends[params.backend]()
+    backend.connect(params)
+
+    if params.exit_ready:
+        sys.exit("INFO: Exiting... You can close the window after 10 seconds.")
+
+    print("INFO: Opening camera...")
+    camera_thread = CameraStream(params)
+
+    params = parameters.Parameters()
+    #making gui
+    root = tk.Tk()
+    
+    global gui
+
+    try: gui = InferenceWindow(root, params)
+    
+    except Exception as e:
+        print(f"Error occurred: {e}")
+    root.mainloop()
+    
+    print("INFO: Starting pose detector...")
+
+    #create our detector. These are default parameters as used in the tutorial. 
+    pose = mp_pose.Pose(model_complexity=params.model, 
+                        min_detection_confidence=0.5, 
+                        min_tracking_confidence=params.min_tracking_confidence, 
+                        smooth_landmarks=params.smooth_landmarks, 
+                        static_image_mode=params.static_image)
+
+    
+
+    #Main program loop:
+
+    rotation = 0
+    i = 0
+
+    prev_smoothing = params.smoothing
+    prev_add_smoothing = params.additional_smoothing
+
+    process_image(gui, params, camera_thread, pose, backend, mp_drawing, mp_pose, root)
+
+    
+        
         
     
         
