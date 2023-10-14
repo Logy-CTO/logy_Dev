@@ -5,6 +5,9 @@ import cv2
 import PIL.Image
 import PIL.ImageTk
 import subprocess as sp
+import pymysql
+from tkinter import messagebox
+
 
 from sys import platform
 
@@ -13,10 +16,34 @@ from pathlib import Path
 from tkinter import Tk, Canvas, Button, PhotoImage, BooleanVar, IntVar, Entry, messagebox
 from PIL import Image, ImageTk
 
+conn = pymysql.connect(host = 'db-iqs5p.pub-cdb.ntruss.com', user = 'user', password = 'vrlogy12@', db = 'vrlogydb', charset = 'utf8')
+
+
+def check_username_password(username,password):
+    cur = conn.cursor() # 데이터베이스에 SQL문을 실행하거나 실행된 결과를 돌려받는 통로
+    
+    # Id, Password 확인
+    check_id_sql = "SELECT password FROM member_info where username = %s"
+    cur.execute(check_id_sql, (username,)) 
+    id_result = cur.fetchone()  # 하나의 행을 가져옴
+    # 라이센스 유무 확인
+    check_is_purchased_sql = "select is_purchased from license where member_id in (select username from member_info where username = %s)"
+    cur.execute(check_is_purchased_sql, (username,))
+    license_result = cur.fetchone()
+    
+        
+    if id_result is not None:
+        if id_result[0] == password: 
+            if license_result[0] == 1: messagebox.showinfo("로그인 성공", "로그인을 성공하였습니다.")    
+            else: messagebox.showerror("라이센스 구매","라이센스가 없습니다. 홈페이지에서 구매해주시길 바랍니다.")    
+        else:   messagebox.showerror("로그인 실패", " 로그인에 실패하였습니다.") 
+    else:   messagebox.showerror("로그인 실패", "해당 아이디가 존재하지 않습니다  .")
+
+
 button_image_1 = None
 OUTPUT_PATH = Path(__file__).parent
-ASSETS_PATH_FRAME0 =  Path("./frame0")
-ASSETS_PATH_FRAME2 =  Path("./frame2")
+ASSETS_PATH_FRAME0 =  Path("C:/dev/assets/frame0")
+ASSETS_PATH_FRAME2 =  Path("C:/dev/assets/frame2")
 
 
 def relative_to_assets_frame0(path: str) -> Path:
@@ -30,7 +57,6 @@ def relative_to_assets_frame2(path: str) -> Path:
 def set_advanced(window, param):
     param["switch_advanced"] = True
     window.quit()
-
 
 window = Tk()
 
@@ -154,8 +180,15 @@ def getparams():
     if "webui" not in param:
         param["webui"] = False
     if "switch_advanced" not in param:  ##추가 8/14 홍택수
-        param["switch_advanced"] = False    
-   
+        param["switch_advanced"] = False     
+    if "member_id" not in param:
+        param["member_id"] = ""
+    if "member_pw" not in param:
+        param["member_pw"] = ""
+    if "db_flag" not in param:
+        param["db_flag"] = 0
+        
+    
     def on_close():
         window.destroy()
         sys.exit("INFO: Exiting... You can close the window after 10 seconds.")
@@ -207,48 +240,48 @@ def getparams():
     camera_id = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
     camera_id.place(x=209.0, y=222.0, width=253.0, height=42.0)
 
-    """------------------------------camera_width------------------------------"""
+    """------------------------------username------------------------------"""
     canvas.create_text(
         50.0,
         305.0,
         anchor="nw",
-        text="Camera Width",
+        text="Email",
         fill="#E7EFFF",
         font=("SourceSansPro Bold", 18 * -1),
     )
     entry_image_2 = PhotoImage(file=relative_to_assets_frame0("entry_2.png"))
     entry_bg_2 = canvas.create_image(335.5, 310.0, image=entry_image_2)
-    camera_width = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
-    camera_width.place(x=209.0, y=288.0, width=253.0, height=42.0)
+    member_id = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
+    member_id.place(x=209.0, y=288.0, width=253.0, height=42.0)
 
-    """------------------------------camera_height------------------------------"""
+    """------------------------------password------------------------------"""
     canvas.create_text(
         50.0,
         372.0,
         anchor="nw",
-        text="Camera height",
+        text="Password",
         fill="#E7EFFF",
         font=("SourceSansPro Bold", 18 * -1),
     )
-   
+
     entry_image_3 = PhotoImage(file=relative_to_assets_frame0("entry_3.png"))
     entry_bg_3 = canvas.create_image(335.5, 377.0, image=entry_image_3)
-    camera_height = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0)
-    camera_height.place(x=209.0, y=355.0, width=253.0, height=42.0)
+    member_pw = Entry(bd=0, bg="#FFFFFF", fg="#000716", highlightthickness=0, show = '*')
+    member_pw.place(x=209.0, y=355.0, width=253.0, height=42.0)
 
     if param["advanced"]:
-        camera_width.pack_forget()
-        camera_width.insert(0, param["camera_width"])
+        member_id.pack_forget()
+        member_id.insert(0, param["member_id"])
 
-        camera_height.pack_forget()
-        camera_height.insert(0, param["camera_height"])
+        member_pw.pack_forget()
+        member_pw.insert(0, param["member_pw"])
 
     if not param["advanced"]:
         camera_id.insert(0, param["camid"])
 
-        camera_width.insert(0, param["camera_width"])
+        member_id.insert(0, param["member_id"])
 
-        camera_height.insert(0, param["camera_height"])
+        member_id.insert(0, param["member_pw"])
 
     # ==========================================================================================
    
@@ -420,6 +453,10 @@ def getparams():
     button_2.place(x=201.0, y=434.0, width=269.0, height=50.0)
     window.mainloop()
     # ----------------------------------------------------------"
+    
+    username = member_id.get()
+    password = member_pw.get()
+    check_username_password(username, password)
 
     # cameraid = "0"
     # hmd_to_neck_offset = [0.0, -0.2, 0.1]
@@ -436,8 +473,6 @@ def getparams():
     # use_hands = param["use_hands"]
 
     # [8/28 강창범] param camera_id 수정
-    camheight = camera_height.get()
-    camwidth = camera_width.get()
     camid = camera_id.get()
 
     #9/4 홍택수 backend param수정
@@ -482,8 +517,8 @@ def getparams():
     param["use_hands"] = use_hands
     param["ignore_hip"] = ignore_hip
     param["camera_settings"] = False
-    param["camera_height"] = camheight
-    param["camera_width"] = camwidth
+    param["member_id"] = username
+    param["member_pw"] = password
     param["model_complexity"] = model_complexity
     param["smooth_landmarks"] = mp_smoothing
     param["static_image"] = static_image
