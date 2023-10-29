@@ -33,11 +33,17 @@ def check_username_password(username,password):
     
         
     if id_result is not None:
-        if id_result[0] == password: 
-            if license_result[0] == 1: messagebox.showinfo("로그인 성공", "로그인을 성공하였습니다.")    
-            else: messagebox.showerror("라이센스 구매","라이센스가 없습니다. 홈페이지에서 구매해주시길 바랍니다.")    
-        else:   messagebox.showerror("로그인 실패", " 로그인에 실패하였습니다.") 
-    else:   messagebox.showerror("로그인 실패", "해당 아이디가 존재하지 않습니다  .")
+        if id_result[0] == password:
+            if license_result is not None and license_result[0] == 1:
+                messagebox.showinfo("로그인 성공", "로그인을 성공하였습니다.")
+            elif license_result is not None and license_result[0] != 1:
+                messagebox.showerror("라이센스 구매", "라이센스가 없습니다. 홈페이지에서 구매해주시길 바랍니다.")
+            else:
+                messagebox.showerror("라이센스 오류", "라이센스가 없습니다. 홈페이지에서 구매해주시길 바랍니다.")
+        else:
+            messagebox.showerror("로그인 실패", "로그인에 실패하였습니다.")
+    else:
+        messagebox.showerror("로그인 실패", "해당 아이디가 존재하지 않습니다.")
 
 
 button_image_1 = None
