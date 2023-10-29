@@ -3,6 +3,7 @@ from scipy.spatial.transform import Rotation as R
 import cv2
 import json
 
+
 class Parameters():
     def __init__(self) -> None:
         param = None
@@ -11,10 +12,13 @@ class Parameters():
         
         self.advanced = param["advanced"]
         
+        
+        
         self.model = param["model_complexity"]
         self.smooth_landmarks = param["smooth_landmarks"]
         self.min_tracking_confidence = param["min_tracking_confidence"]
         self.static_image = param["static_image"]
+        
         
         #PARAMETERS:
         #-----------------------

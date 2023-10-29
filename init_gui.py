@@ -27,7 +27,7 @@ def check_username_password(username,password):
     cur.execute(check_id_sql, (username,)) 
     id_result = cur.fetchone()  # 하나의 행을 가져옴
     # 라이센스 유무 확인
-    check_is_purchased_sql = "select is_purchased from license where member_id in (select username from member_info where username = %s)"
+    check_is_purchased_sql = "select is_purchased from license, member_info where member_id = username AND username = %s"
     cur.execute(check_is_purchased_sql, (username,))
     license_result = cur.fetchone()
     
