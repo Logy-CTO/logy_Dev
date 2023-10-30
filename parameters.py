@@ -3,7 +3,6 @@ from scipy.spatial.transform import Rotation as R
 import cv2
 import json
 
-
 class Parameters():
     def __init__(self) -> None:
         param = None
@@ -12,20 +11,19 @@ class Parameters():
         
         self.advanced = param["advanced"]
         
-        
-        
         self.model = param["model_complexity"]
         self.smooth_landmarks = param["smooth_landmarks"]
         self.min_tracking_confidence = param["min_tracking_confidence"]
         self.static_image = param["static_image"]
-        
         
         #PARAMETERS:
         #-----------------------
         self.new_image_available = False
         #------------------------
         self.maximgsize = param["imgsize"]               #to prevent working with huge images, images that have one axis larger than this value will be downscaled.
-        self.cameraid = param["camid"]                    #to use with an usb or virtual webcam. If 0 doesnt work/opens wrong camera, try numbers 1-5 or so
+        self.cameraid = param["camid"]   
+        self.member_id = param["member_id"]
+        self.member_pw = param["member_pw"]                      #to use with an usb or virtual webcam. If 0 doesnt work/opens wrong camera, try numbers 1-5 or so
         #cameraid = "http://192.168.1.102:8080/video"   #to use ip webcam, uncomment this line and change to your ip
         self.hmd_to_neck_offset = [0,-0.2,0.1]    #offset of your hmd to the base of your neck, to ensure the tracking is stable even if you look around. Default is 20cm down, 10cm back.
         self.preview_skeleton = param["prevskel"]             #if True, whole skeleton will appear in vr 2 meters in front of you. Good to visualize if everything is working

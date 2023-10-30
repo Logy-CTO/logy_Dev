@@ -9,7 +9,6 @@ import pymysql
 from tkinter import messagebox
 from inference_gui import make_inference_gui
 
-
 from sys import platform
 
 import os
@@ -19,6 +18,8 @@ from PIL import Image, ImageTk
 
 conn = pymysql.connect(host = '113.131.111.147', user = 'root', password = 'vrlogy12@', db = 'vrlogydb', charset = 'utf8')
 
+def on_close():
+    window.destroy()
 
 def check_username_password(username,password):
     cur = conn.cursor() # 데이터베이스에 SQL문을 실행하거나 실행된 결과를 돌려받는 통로
@@ -38,7 +39,7 @@ def check_username_password(username,password):
             if license_result is not None and license_result[0] == 1:
                 messagebox.showinfo("로그인 성공", "로그인을 성공하였습니다.")
                 pass
-                return make_inference_gui
+                return  make_inference_gui
 
             elif license_result is not None and license_result[0] != 1:
                 messagebox.showerror("라이센스 구매", "라이센스가 없습니다. 홈페이지에서 구매해주시길 바랍니다.")
@@ -52,8 +53,6 @@ def check_username_password(username,password):
     else:
         messagebox.showerror("로그인 실패", "해당 아이디가 존재하지 않습니다.")
         return getparams()
-    
-
 
 button_image_1 = None
 OUTPUT_PATH = Path(__file__).parent
@@ -100,44 +99,15 @@ port = 9000
 
 
 
-# ----------------카메라 인터페이스 추가, 크기 : 320, 240(07/30 국현우)---------------
-
-
-"""def show_camera_frame():
-    global camera, canvas, window
-    _, frame = camera.read()
-    if frame is not None:
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        photo = PIL.ImageTk.PhotoImage(image=PIL.Image.fromarray(frame))
-
-        # 현재 canvas의 가로 및 세로 크기를 가져옵니다
-        canvas_width = canvas.winfo_width()
-        canvas_height = canvas.winfo_height()
-
-        # 이미지의 가로 및 세로 크기를 가져옵니다
-        image_width = photo.width()
-        image_height = photo.height()
-
-        # 이미지를 중앙에 배치하기 위한 좌표 계산
-        x = (canvas_width - image_width) // 2
-        y = (canvas_height - image_height) // 2
-
-        canvas.create_image(x, y, image=photo, anchor=tk.NW)
-        canvas.photo = photo
-
-    window.after(10, show_camera_frame)"""
-# --------------------------------------------------------------
-
-
 def getparams():
-    global camera, window, canvas  # 카메라 인터페이스 구현을 위한 전역변수설정(07/30 국현우)
+    global camera, window, canvas # 카메라 인터페이스 구현을 위한 전역변수설정(07/30 국현우)
     try:
         param = pickle.load(open("params.p", "rb"))
     except:
         param = {}
 
     if "camid" not in param:
-        param["camid"] = "0"
+        param["camid"] = 0
     if "imgsize" not in param:
         param["imgsize"] = 640
     if "neckoffset" not in param:
@@ -203,12 +173,8 @@ def getparams():
     if "db_flag" not in param:
         param["db_flag"] = 0
         
-    
-    def on_close():
-        window.destroy()
-        sys.exit("INFO: Exiting... You can close the window after 10 seconds.")
 
-        window.protocol("WM_DELETE_WINDOW", on_close)
+    window.protocol("WM_DELETE_WINDOW", on_close)
 
     # =============================================8/15 강창범 수정=============================================
 
@@ -235,7 +201,7 @@ def getparams():
         231.0,
         415.0,
         anchor="nw",
-        text="Steam VR을 실행하시고 진행해주세요.",
+        text="Steam VR을 실행한 뒤  클릭해주세요.",
         fill="#FF3333",
         font=("SourceSansPro Bold", -11),
     )
@@ -287,7 +253,6 @@ def getparams():
     if param["advanced"]:
         
         camera_id.insert(0, param["camid"])
-        
         member_id.pack_forget()
         member_id.insert(0, param["member_id"])
 
@@ -302,25 +267,7 @@ def getparams():
         member_id.insert(0, param["member_pw"])
 
     # ==========================================================================================
-   
-    """
-    if not param["advanced"]:
 
-        # ---- 카메라 인터페이스 GUI (07/30 국현우) ----
-        canvas = tk.Canvas(open_gui, width="320", height="240")
-        canvas.pack()
-
-        # Open the camera
-        camera = cv2.VideoCapture(0)
-
-        # Display the camera frame in the tkinter window
-        #show_camera_frame()
-    """
-
-    """==========================새로운 윈도우 띄우기([강창범]8/16)============================="""
-   
-   
-   
     ##gui2 버그 해결 8/31 홍택수 (~352)
     button_image_1 = PhotoImage(file=relative_to_assets_frame2("button_1.png"))
     image_image_3 = PhotoImage(file=relative_to_assets_frame2("image_1.png"))
@@ -393,7 +340,7 @@ def getparams():
 
         canvas.create_image(175.0, 161.0, image=image_image_3)
         canvas.create_text(85.0, 31.0, anchor="nw", text="DISABLE HIP TRACKER", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
-        canvas.create_text(85.0, 87.0, anchor="nw", text="DEV: SPAWN TRAKER FOR HANDS", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
+        canvas.create_text(85.0, 87.0, anchor="nw", text="Calculate Calorie", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(85.0, 143.0, anchor="nw", text="DEV: PREVIEW SKELETON IN VR", fill="#FFFFFF", font=("Roboto Medium", 14 * -1))
         canvas.create_text(34.0, 206.0, anchor="nw", text="steam VR", fill="#FFFFFF", font=("Inter", 16 * -1))
         canvas.create_text(185.0, 207.0, anchor="nw", text="VRchatOSC", fill="#FFFFFF", font=("Inter", 16 * -1))
@@ -470,11 +417,14 @@ def getparams():
     )
     button_2.place(x=201.0, y=434.0, width=269.0, height=50.0)
     window.mainloop()
+    
     # ----------------------------------------------------------"
     
     username = member_id.get()
     password = member_pw.get()
     check_username_password(username, password)
+    camid = camera_id.get()
+    
 
     # cameraid = "0"
     # hmd_to_neck_offset = [0.0, -0.2, 0.1]
@@ -491,8 +441,8 @@ def getparams():
     # use_hands = param["use_hands"]
 
     # [8/28 강창범] param camera_id 수정
-    camid = camera_id.get()
-
+    
+    
     #9/4 홍택수 backend param수정
     backend = int(varbackend.get())
     backend_ip_set = param["backend_ip"]
@@ -535,10 +485,10 @@ def getparams():
     param["use_hands"] = use_hands
     param["ignore_hip"] = ignore_hip
     param["camera_settings"] = False
-    param["member_id"] = username
-    param["member_pw"] = password
     param["camera_width"] = 640
     param["camera_height"] = 480
+    param["member_id"] = username
+    param["member_pw"] = password
     param["model_complexity"] = model_complexity
     param["smooth_landmarks"] = mp_smoothing
     param["static_image"] = static_image
@@ -549,6 +499,8 @@ def getparams():
     param["backend_ip"] = backend_ip_set
     param["backend_port"] = backend_port_set
     param["webui"] = False
+    
+    on_close()
 
     if switch_advanced:
         param["advanced"] = not advanced
@@ -559,6 +511,8 @@ def getparams():
         return None
     else:
         return param
+    
+    
 
 
 if __name__ == "__main__":

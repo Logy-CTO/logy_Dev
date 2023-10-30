@@ -1,187 +1,200 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import Canvas
-from tkinter import Tk, Canvas, Entry, Text, Button, PhotoImage, BooleanVar
 import numpy as np
 from scipy.spatial.transform import Rotation as R
 from helpers import shutdown, sendToSteamVR
-import cv2
-from PIL import Image,ImageTk
+from tkinter import scrolledtext
+import sys
 #use_steamvr = True
-from pathlib import Path
-import os
-
-OUTPUT_PATH = Path(__file__).parent
-
-ASSETS_PATH_FRAME1 = Path("c:/vlogy/logy_Dev/assets/frame1")
-
-def relative_to_assets_frame1(path: str) -> Path:
-    return ASSETS_PATH_FRAME1 / Path(path)
-
-### 9/1 홍택수 ###
-#####토글####
-def create_toggle_switch( canvas, command=None, x=0, y=0, scale=0.71):
-    # 토글 상태 변수 및 이미지 로드
-    toggle_status = BooleanVar()
-    toggle_status.set(False)
-
-    original_on_image = Image.open(relative_to_assets_frame1("toggle_on.png"))
-    original_off_image = Image.open(relative_to_assets_frame1("toggle_off.png"))
-
-    # 이미지 크기 조절
-    on_image_resized = original_on_image.resize((round(original_on_image.width * scale), round(original_on_image.height * scale)), Image.LANCZOS)
-    off_image_resized = original_off_image.resize((round(original_off_image.width * scale), round(original_off_image.height * scale)), Image.LANCZOS)
-
-    toggle_on_image = ImageTk.PhotoImage(on_image_resized)
-    toggle_off_image = ImageTk.PhotoImage(off_image_resized)
-
-    # 토글 이미지 생성 및 위치 설정
-    toggle_switch = canvas.create_image(x, y, image=toggle_off_image, anchor="nw")
-
-    # 토글 동작 함수
-    def toggle_action(event):
-        if command:  # command가 지정되었을 경우 실행합니다.
-            command()
-
-        if toggle_status.get():
-            canvas.itemconfigure(toggle_switch, image=toggle_off_image)
-            toggle_status.set(False)
-        else:
-            canvas.itemconfigure(toggle_switch, image=toggle_on_image)
-            toggle_status.set(True)
-
-    canvas.tag_bind(toggle_switch,"<Button-1>",toggle_action)
-
-    return toggle_switch
 
 class InferenceWindow(tk.Frame):
     def __init__(self, root, params, *args, **kwargs):
-        super().__init__(root)  
+        tk.Frame.__init__(self, root, *args, **kwargs)
         
         self.params = params
         params.gui = self       #uhh is this a good idea?
         self.root = root
-        self.root.geometry("528x209")
-        self.root.minsize(width = 528, height = 209)
-        self.root.maxsize(width = 528, height = 209)
 
-        ### 9/1 홍택수 ( ~73 ) ### 
-
-        self.canvas = Canvas(
-            bg = "#FFFFFF",
-            height = 209,
-            width = 528,
-            bd = 0,
-            highlightthickness = 0,
-            relief = "ridge"
-        )
-        self.canvas.pack()
-
-        self.image_image_1 = PhotoImage(
-            file=relative_to_assets_frame1("image_1.png"))
-        self.image_1 = self.canvas.create_image(
-            0.0,
-            0.0,
-            anchor=tk.NW,
-            image=self.image_image_1
-        )
-
-        self.canvas.create_text(
-            180.0,
-            22.0,
-            anchor="nw",
-            text="PAUSE/UNPAUSE TRACKING",
-            fill="#FFFFFF",
-            font=("Roboto Medium", 14 * -1)
-        )
-        #-----
         # calibrate rotation
         self.calib_rot_var = tk.BooleanVar(value=self.params.calib_rot)
         self.calib_flip_var = tk.BooleanVar(value=self.params.flip)
+        #self.rot_y_var = tk.DoubleVar(value=self.params.euler_rot_y)
 
         frame1 = tk.Frame(self.root)
         frame1.pack()
         self.calibrate_rotation_frame(frame1)
 
+        self.put_separator()
+
         # calibrate tilt
         self.calib_tilt_var = tk.BooleanVar(value=self.params.calib_tilt)
-    
+        #self.rot_x_var = tk.DoubleVar(value=self.params.euler_rot_x)
+        #self.rot_z_var = tk.DoubleVar(value=self.params.euler_rot_z)
+
         frame2 = tk.Frame(self.root)
         frame2.pack()
         self.calibrate_tilt_frame(frame2)
 
+        self.put_separator()
+
         # calibrate scale
         self.calib_scale_var = tk.BooleanVar(value=self.params.calib_scale)
+        #self.scale_var = tk.DoubleVar(value=self.params.posescale)
 
         frame3 = tk.Frame(self.root)
         frame3.pack()
         self.calibrate_scale_frame(frame3)
 
-        self.smoothing_1 = 0.5   
-        self.smoothing_2 = 0.5
-        self.ready2exit = self.ready_to_exit
+        self.put_separator()
 
-        ### 9/1 홍택수 ( ~114 ) ### 
         # recalibrate
-        self.button_image_1 = PhotoImage(
-            file=relative_to_assets_frame1("button_1.png"))
-        button_1 = Button(
-            image=self.button_image_1,
-            borderwidth=0,
-            highlightthickness=0,
-            command=self.autocalibrate,  # 원하는 기능을 수행할 함수를 지정합니다.
-            relief="flat"
-        )
-        button_1.place(
-            x=20.0,
-            y=60.0,
-            width=488.0,
-            height=50.0
-        )
+        tk.Button(self.root, text='Recalibrate (automatically recalibrates checked values above)', 
+                    command=self.autocalibrate).pack()
+        
+        text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=40, height=10)
+        text_area.pack(expand=True, fill='both')
 
-        ### 9/1 홍택수 ###
+
+        def redirect_output_to_text_widget():
+            class TextRedirect:
+                def __init__(self, text_widget):
+                    self.text_widget = text_widget
+
+                def write(self, string):
+                    self.text_widget.insert(tk.END, string)
+
+                def flush(self):
+                    pass
+
+            sys.stdout = TextRedirect(text_area)
+
+        # sys.stdout을 텍스트 위젯으로 리다이렉션
+        redirect_output_to_text_widget()       
+      
         # pause tracking
-        toggle_switch_button = create_toggle_switch(self.canvas,x=130.0,y=13.0,scale=0.71,
-                                            command=self.pause_tracking) 
+        tk.Button(self.root, text='Pause/Unpause tracking', 
+                    command=self.pause_tracking).pack()
+                  
+        
+        # show the Profile 1 profile 2 text:
+        if params.advanced:
+            frame_profile = tk.Frame(self.root)
+            frame_profile.pack()
+            tk.Label(frame_profile, text=" ", width = 20).pack(side='left')
+            tk.Label(frame_profile, text="Profile 1", width = 10).pack(side='left')
+            tk.Label(frame_profile, text=" ", width = 5).pack(side='left')
+            tk.Label(frame_profile, text="Profile 2", width = 10).pack(side='left')
+            tk.Label(frame_profile, text=" ", width = 5).pack(side='left')
+            tk.Label(frame_profile, text=" ", width = 5).pack(side='left')
+
+        # smoothing
+        if params.advanced:
+            frame4 = tk.Frame(self.root)
+            frame4.pack()
+            self.change_smooothing_frame(frame4)
+
+        # smoothing
+        frame4_2 = tk.Frame(self.root)
+        frame4_2.pack()
+        self.change_add_smoothing_frame(frame4_2)
+
+        # smoothing
+        if params.advanced:
+            frame4_1 = tk.Frame(self.root)
+            frame4_1.pack()
+            self.change_cam_lat_frame(frame4_1)
+
+        # rotate image 
+        frame5 = tk.Frame(self.root)
+        frame5.pack()
+        self.change_image_rotation_frame(frame5)
+        
+        # neck offset
+        if params.advanced:
+            frame6 = tk.Frame(self.root)
+            frame6.pack()
+            self.change_neck_offset_frame(frame6)
         
         #frametime log
         self.log_frametime_var = tk.BooleanVar(value=self.params.log_frametime)
-       
-        ### 9/1 홍택수 ( ~192 ) ### 
+        #log_frametime_check = tk.Checkbutton(self.root, text="Log frametimes to console", variable=self.log_frametime_var, command=self.change_log_frametime)
+        #log_frametime_check.pack()
+
         # exit
-        self.button_image_2 = PhotoImage(
-            file=relative_to_assets_frame1("button_2.png"))
-        self.button_2 = Button(
-            image=self.button_image_2,
-            borderwidth=0,
-            highlightthickness=0,
-            command=self.params.ready2exit,
-            relief="flat"
-        )
-        self.button_2.place(
-            x=20.0,
-            y=130.0,
-            width=488.0,
-            height=50.0
-        )
+        tk.Button(self.root, text='Press to exit', command=self.params.ready2exit).pack()
 
         root.protocol("WM_DELETE_WINDOW", self.params.ready2exit) # when press x
 
-        # smoothing_1 and smoothing_2 속성 추가, 초기값으로 임시로 0을 설정했습니다. 
+        #self.root.after(0, self.set_rot_y_var)
+        #self.root.after(0, self.set_rot_x_var)
+        
+        text_area = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=40, height=10)
+        text_area.pack(expand=True, fill='both')
 
-    def ready_to_exit(self):  # 메소드 이름 변경
-        self.gui.root.destroy()
+        def redirect_output_to_text_widget():
+            class TextRedirect:
+                def __init__(self, text_widget):
+                    self.text_widget = text_widget
 
-    camera_latency = 0   # TODO: Set an appropriate initial value for camera latency
+                def write(self, string):
+                    self.text_widget.insert(tk.END, string)
 
-    hmd_to_neck_offset=[0,0,0]
-    
+                def flush(self):
+                    pass
+
+            sys.stdout = TextRedirect(text_area)
+
+        # sys.stdout을 텍스트 위젯으로 리다이렉션
+        redirect_output_to_text_widget()  
+
+    def change_neck_offset_frame(self,frame):
+        tk.Label(frame, text="HMD to neck offset:", width = 20).pack(side='left')
+        
+        text1 = tk.Entry(frame, width = 5)
+        text1.pack(side='left')
+        text1.insert(0, self.params.hmd_to_neck_offset[0])
+        
+        text2 = tk.Entry(frame, width = 5)
+        text2.pack(side='left')
+        text2.insert(0, self.params.hmd_to_neck_offset[1])
+        
+        text3 = tk.Entry(frame, width = 5)
+        text3.pack(side='left')
+        text3.insert(0, self.params.hmd_to_neck_offset[2])
+
+        tk.Button(frame, text='Update', command=lambda *args: self.params.change_neck_offset(float(text1.get()),float(text2.get()),float(text3.get()))).pack(side='left')
+
     def change_log_frametime(self):
         self.params.log_frametime = self.log_frametime_var.get()
         if self.params.log_frametime:
             print("INFO: Enabled frametime logging")
         else:
             print("INFO: Disabled frametime logging")
+
+    #def set_rot_y_var(self):
+        #angle = self.params.euler_rot_y
+        
+       # if self.params.flip:
+            #angle += 180
+        
+            #print("calculated angle from rot is:",angle)
+        #if angle >= 360:
+            #angle -= 360
+        #elif angle < 0:
+            #angle += 360
+           # print("calculated angle final is:",angle)
+        #self.rot_y_var.set(angle)
+        #self.root.after(0, self.set_rot_y_var)
+
+
+    #def set_rot_z_var(self):
+        #self.rot_z_var.set(self.params.euler_rot_z)
+
+
+   # def set_rot_x_var(self):
+        #self.rot_x_var.set(self.params.euler_rot_x)
+        #self.root.after(0, self.set_rot_x_var)
+
 
     def set_scale_var(self):
         self.scale_var.set(self.params.posescale)
@@ -197,9 +210,23 @@ class InferenceWindow(tk.Frame):
 
 
     def calibrate_rotation_frame(self, frame):
-       
+        #rot_check = tk.Checkbutton(frame, text = "Enable automatic rotation calibration", variable = self.calib_rot_var, command=self.change_rot_auto)#, command=lambda *args: show_hide(varrot, [rot_y_frame]))
+        #flip_check = tk.Checkbutton(frame, text = "Flip calibration", variable = self.calib_flip_var, command=self.change_rot_flip)
+        #rot_y_frame = tk.Frame(frame)
+
+        #rot_check.pack()
+        #flip_check.pack()
+        #rot_y_frame.pack()
         self.change_rot_auto()
-       
+        #rot_y = tk.Scale(rot_y_frame, label="Roation y:", from_=-40, to=400, #command=lambda *args: self.params.rot_change_y(self.rot_y_var.get()), 
+                        #orient=tk.HORIZONTAL, length=400, showvalue=1, tickinterval=60, variable=self.rot_y_var)
+        #rot_y.pack(expand=True,fill='both',side='left')
+
+        #self.rot_y_var.trace_add('write', callback=lambda var, index, mode: self.params.rot_change_y(self.rot_y_var.get()))
+
+        #tk.Button(rot_y_frame, text="<", command= lambda *args: self.rot_y_var.set(self.rot_y_var.get()-1), width=10).pack(expand=True,fill='both',side='left')
+        #tk.Button(rot_y_frame, text=">", command= lambda *args: self.rot_y_var.set(self.rot_y_var.get()+1), width=10).pack(expand=True,fill='both',side='left')
+
 
     def change_tilt_auto(self):
         self.params.calib_tilt = self.calib_tilt_var.get()
@@ -208,8 +235,31 @@ class InferenceWindow(tk.Frame):
     
     def calibrate_tilt_frame(self, frame):
         
+        #tilt_check = tk.Checkbutton(frame, text="Enable automatic tilt calibration", variable=self.calib_tilt_var, command=self.change_tilt_auto)#, command=lambda *args: show_hide(vartilt, [rot_z_frame, rot_x_frame]))
+        #tilt_check.pack()
+
+        #rot_x_frame = tk.Frame(frame)
+        #rot_x_frame.pack()
+        #rot_z_frame = tk.Frame(frame)
+        #rot_z_frame.pack()
         self.change_tilt_auto()
+        #rot_x = tk.Scale(rot_x_frame, label="Roation x:", from_=0, to=180, #command=lambda *args: self.params.rot_change_x(self.rot_x_var.get()), 
+                        #orient=tk.HORIZONTAL, length=400, showvalue=1, tickinterval=15, variable=self.rot_x_var)
+        #rot_x.pack(expand=True,fill='both',side='left')
+        #self.rot_x_var.trace_add('write', callback=lambda var, index, mode: self.params.rot_change_x(self.rot_x_var.get()))
+
+        #tk.Button(rot_x_frame, text="<", command=lambda *args: self.rot_x_var.set(self.rot_x_var.get()-1), width=10).pack(expand=True,fill='both',side='left')
+        #tk.Button(rot_x_frame, text=">", command=lambda *args: self.rot_x_var.set(self.rot_x_var.get()+1), width=10).pack(expand=True,fill='both',side='left')
         
+        #rot_z = tk.Scale(rot_z_frame, label="Roation z:", from_=90, to=270, #command=lambda *args: self.params.rot_change_z(self.rot_z_var.get()), 
+                        #orient=tk.HORIZONTAL, length=400, showvalue=1, tickinterval=30, variable=self.rot_z_var)
+        #rot_z.pack(expand=True,fill='both',side='left')
+        #self.rot_z_var.trace_add('write', callback=lambda var, index, mode: self.params.rot_change_z(self.rot_z_var.get()))
+
+        #tk.Button(rot_z_frame, text="<", command=lambda *args: self.rot_z_var.set(self.rot_z_var.get()-1), width=10).pack(expand=True,fill='both',side='left')
+        #tk.Button(rot_z_frame, text=">", command=lambda *args: self.rot_z_var.set(self.rot_z_var.get()+1), width=10).pack(expand=True,fill='both',side='left')
+    
+
     def change_scale_auto(self):
         self.params.calib_scale = self.calib_scale_var.get()
         print(f"Mark scale to{'' if self.params.calib_scale else ' NOT'} be automatically calibrated")
@@ -217,8 +267,40 @@ class InferenceWindow(tk.Frame):
 
     def calibrate_scale_frame(self, frame):
         
+        #scale_check = tk.Checkbutton(frame, text ="Enable automatic scale calibration", variable=self.calib_scale_var, command=self.change_scale_auto)#, command=lambda *args: show_hide(varrot, [rot_y_frame]))
+        #scale_frame = tk.Frame(frame)
+
+        #scale_check.pack()
+        #scale_frame.pack()
         self.change_scale_auto()
-       
+        #scale = tk.Scale(scale_frame, label="Scale:", from_=0.5, to=2.0, #command=lambda *args: self.params.change_scale(self.scale_var.get()), 
+                        #orient=tk.HORIZONTAL, length=400, showvalue=1, tickinterval=0.1, variable=self.scale_var, resolution=0.01)
+        #scale.pack(expand=True,fill='both',side='left')
+        #self.scale_var.trace_add('write', callback=lambda var, index, mode: self.params.change_scale(self.scale_var.get()))
+
+        #tk.Button(scale_frame, text="<", command=lambda *args: self.scale_var.set(self.scale_var.get()-0.01), width=10).pack(expand=True,fill='both',side='left')
+        #tk.Button(scale_frame, text=">", command=lambda *args: self.scale_var.set(self.scale_var.get()+0.01), width=10).pack(expand=True,fill='both',side='left')
+
+
+    def change_smooothing_frame(self, frame):
+        
+        tk.Label(frame, text="Smoothing window:", width = 20).pack(side='left')
+        smoothingtext1 = tk.Entry(frame, width = 10)
+        smoothingtext1.pack(side='left')
+        smoothingtext1.insert(0, self.params.smoothing_1)
+
+        tk.Button(frame, text='Update', command=lambda *args: self.params.change_smoothing(float(smoothingtext1.get()),1)).pack(side='left')
+        
+        if self.params.advanced:
+            smoothingtext2 = tk.Entry(frame, width = 10)
+            smoothingtext2.pack(side='left')
+            smoothingtext2.insert(0, self.params.smoothing_2)
+
+            tk.Button(frame, text='Update', command=lambda *args: self.params.change_smoothing(float(smoothingtext2.get()),2)).pack(side='left')
+        
+        tk.Button(frame, text='Disable', command=lambda *args: self.params.change_smoothing(0.0)).pack(side='left')
+
+
     def change_cam_lat_frame(self, frame):
 
         tk.Label(frame, text="Camera latency:", width = 20).pack(side='left')
@@ -230,12 +312,39 @@ class InferenceWindow(tk.Frame):
         
     def change_add_smoothing_frame(self, frame):
 
-      
+        #tk.Label(frame, text="Additional smoothing:", width = 20).pack(side='left')
+        #lat1 = tk.Entry(frame, width = 10)
+        #lat1.pack(side='left')
+        #lat1.insert(0, self.params.additional_smoothing_1)
+
+        #tk.Button(frame, text='Update', command=lambda *args: self.params.change_additional_smoothing(float(lat1.get()),1)).pack(side='left')
+        #if self.params.advanced:
+            #lat2 = tk.Entry(frame, width = 10)
+            #lat2.pack(side='left')
+            #lat2.insert(0, self.params.additional_smoothing_2)
+
+            #tk.Button(frame, text='Update', command=lambda *args: self.params.change_additional_smoothing(float(lat2.get()),2)).pack(side='left')
         self.params.change_additional_smoothing(0.7)
-       
+        #tk.Button(frame, text='Disable', command=lambda *args: self.params.change_additional_smoothing(0.0)).pack(side='left')
+
     def change_image_rotation_frame(self, frame):
         self.params.change_img_rot(0)  # 기본값으로 0도 회전 설정
 
+    ''' 이미지 회전기능 삭제 (08/09)
+    def change_image_rotation_frame(self, frame):
+        rot_img_var = tk.IntVar(value=self.params.img_rot_dict_rev[self.params.rotate_image])
+        tk.Label(frame, text="Image rotation clockwise:", width = 20).grid(row=0, column=0)
+        tk.Radiobutton(frame, text="0", variable = rot_img_var, value = 0).grid(row=0, column=1)
+        tk.Radiobutton(frame, text="90",  variable = rot_img_var, value = 1).grid(row=0, column=2)
+        tk.Radiobutton(frame, text="180",  variable = rot_img_var, value = 2).grid(row=0, column=3)
+        tk.Radiobutton(frame, text="270",  variable = rot_img_var, value = 3).grid(row=0, column=4)
+
+        rot_img_var.trace_add('write', callback=lambda var, index, mode: self.params.change_img_rot(rot_img_var.get()))
+
+        img_mirror_var = tk.BooleanVar(value=self.params.mirror)
+        img_mirror_check = tk.Checkbutton(frame, text="Mirror", variable=img_mirror_var, command=lambda *args: self.params.change_mirror(bool(img_mirror_var.get())))
+        img_mirror_check.grid(row=0, column=5)
+   '''
 
     def autocalibrate(self):
 
@@ -267,7 +376,10 @@ class InferenceWindow(tk.Frame):
             value = np.arctan2(feet_middle[0],-feet_middle[1]) * 57.295779513
             
             print("INFO: Precalib z angle: ", value)
-          
+            
+            #self.params.rot_change_z(-value+180)
+            #self.set_rot_z_var()
+            
             for j in range(self.params.pose3d_og.shape[0]):
                 self.params.pose3d_og[j] = self.params.global_rot_z.apply(self.params.pose3d_og[j])
                 
@@ -281,7 +393,9 @@ class InferenceWindow(tk.Frame):
             value = np.arctan2(feet_middle[2],-feet_middle[1]) * 57.295779513
             
             print("INFO: Precalib x angle: ", value)
-           
+            
+            #self.params.rot_change_x(value+90)
+            #self.set_rot_x_var()
         
             for j in range(self.params.pose3d_og.shape[0]):
                 self.params.pose3d_og[j] = self.params.global_rot_x.apply(self.params.pose3d_og[j])
@@ -304,6 +418,12 @@ class InferenceWindow(tk.Frame):
    
             print("INFO: Calibrate to value:", value * 57.295779513) 
             
+            #self.params.rot_change_y(value * 57.295779513)
+            
+            #angle = self.params.global_rot_y.as_euler('zyx', degrees=True)
+            #print("angle from rot = ", -(180+angle[1]), "whole:",angle)
+            
+            #self.set_rot_y_var()
 
             for j in range(self.params.pose3d_og.shape[0]):
                 self.params.pose3d_og[j] = self.params.global_rot_y.apply(self.params.pose3d_og[j])
@@ -335,11 +455,13 @@ class InferenceWindow(tk.Frame):
             print("INFO: Pose estimation unpaused") 
         self.params.paused = not self.params.paused
 
+
 def make_inference_gui(_params):
     root = tk.Tk()
-    #root.geometry("528X209")
     InferenceWindow(root, _params).pack(side="top", fill="both", expand=True)
     root.mainloop()
+    
 
 if __name__ == "__main__":
-    make_inference_gui()
+    #make_inference_gui()
+    print("hehe")

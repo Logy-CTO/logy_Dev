@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 import cv2
 import threading
 import sys
-
+from PIL import Image,ImageTk
 def draw_pose(frame,pose,size):
     pose = pose*size
     for sk in EDGES:
@@ -124,8 +124,10 @@ def get_rot_hands(pose3d):
 
     r_hand_rot = R.from_matrix(r_hand_rot).as_quat()
     l_hand_rot = R.from_matrix(l_hand_rot).as_quat()
-    
+
+
     return l_hand_rot, r_hand_rot
+
 
 def get_rot_mediapipe(pose3d):
     hip_left = pose3d[2]
@@ -344,7 +346,14 @@ class CameraStream():
                 print("ERROR: Camera capture failed! missed frames.")
                 self.params.exit_ready = True
                 return
- 
+            if self.params.gui is not None:
+                    img_rgb = cv2.cvtColor(self.image_from_thread, cv2.COLOR_BGR2RGB)
+                    img_pil = Image.fromarray(img_rgb)
+                    img_tkinter = ImageTk.PhotoImage(img_pil)
+
+                    # GUI에서 사용할 수 있도록 이미지 저장합니다.
+                    self.image = img_tkinter
+
 
 def shutdown(params):
     # first save parameters 

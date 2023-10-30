@@ -4,15 +4,16 @@ import os
 import sys
 
 sys.path.append(os.getcwd())    #embedable python doesnt find local modules without this line
-
+import datetime
 import time
 import threading
 import cv2
 import numpy as np
-
+import pymysql
 from helpers import  CameraStream, shutdown, mediapipeTo3dpose, get_rot_mediapipe, get_rot_hands, draw_pose, keypoints_to_original, normalize_screen_coordinates, get_rot
 from scipy.spatial.transform import Rotation as R
 from backends import DummyBackend, SteamVRBackend, VRChatOSCBackend
+from init_gui import getparams
 import webui
 
 import inference_gui
@@ -22,23 +23,30 @@ import tkinter as tk
 
 import mediapipe as mp
 
+#start_time = time.time()
 
 def main():
+
     mp_drawing = mp.solutions.drawing_utils
     mp_pose = mp.solutions.pose
-
+    
+    coordinates_saved = False
+    prev_coordinates = 0
+    calories_accumulated = 0
     use_steamvr = True
     
     print("INFO: Reading parameters...")
-
-    params = parameters.Parameters()
     
+    params = parameters.Parameters()
+    #init_gui창이 파괴되기전에 username받아오기
+    member_id = params.member_id
+
     if params.webui:
         webui_thread = threading.Thread(target=webui.start_webui, args=(params,), daemon=True)
         webui_thread.start()
     else:
         print("INFO: WebUI disabled in parameters")
-
+    
     backends = { 0: DummyBackend, 1: SteamVRBackend, 2: VRChatOSCBackend }
     backend = backends[params.backend]()
     backend.connect(params)
@@ -111,6 +119,38 @@ def main():
         if params.paused:
             cv2.imshow("out", img)
             cv2.waitKey(1)
+            #end_time = time.time()
+            
+            if not coordinates_saved:
+                # 누적된 칼로리값 출력
+                print(f"누적된 칼로리값: {calories_accumulated:.2f} kcal")
+    
+                coordinates_saved = True
+                conn = pymysql.connect(host='113.131.111.147', user='root', password='vrlogy12@', db='vrlogydb', charset='utf8')
+    
+                # 커서 생성
+                cursor = conn.cursor()
+                current_date = datetime.date.today()
+                calories_accumulated = round(calories_accumulated, 2)
+    
+                sql_check = "SELECT COUNT(*) FROM Calorie WHERE member_id = %s"
+                cursor.execute(sql_check, (member_id,))
+                result = cursor.fetchone()
+
+                if result[0] > 0:
+                    sql_update = "UPDATE Calorie SET Calorie = %s, date = %s WHERE member_id = %s"
+                    cursor.execute(sql_update, (calories_accumulated, current_date, member_id))
+                else:
+                    sql_insert = "INSERT INTO Calorie (member_id, Calorie, date) VALUES (%s, %s, %s)"
+                    cursor.execute(sql_insert, (member_id, calories_accumulated, current_date))
+
+                # 변경사항을 커밋
+                conn.commit()
+
+                # 연결 종료
+                cursor.close()
+                conn.close()
+
             continue
         
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -148,8 +188,27 @@ def main():
                 
             if params.use_hands:
                 hand_rots = get_rot_hands(pose3d)
+                
+                current_coordinates = hand_rots[1]
+                #exercise_duration_seconds = end_time - start_time
+                #time_hours = exercise_duration_seconds / 3600
+                # 칼로리 계산 부분 (위 예시 코드 사용)
+                movement_diff = np.abs(current_coordinates - prev_coordinates)
+                total_distance_m = np.sum(movement_diff) * 0.01 / 100
+                mets = 2.3  # 2.3 메츠를 가정
+                weight_kg = 70  # 예시로 70kg로 가정
+                time_hours = 1
+                calories_burned = mets * weight_kg * time_hours * total_distance_m
+
+                # 누적된 칼로리값 업데이트
+                calories_accumulated += calories_burned
+
+                # 현재 좌표값을 이전 좌표값으로 업데이트
+                prev_coordinates = current_coordinates
+
             else:
                 hand_rots = None
+
                 
             
             #pose3d[0] = [1,0,1]
@@ -173,9 +232,12 @@ def main():
         
         cv2.imshow("out", img)           #show image, exit program if we press esc
         if cv2.waitKey(1) == 27:
+            
+            
             backend.disconnect()
             shutdown(params)
 
 
+           
 if __name__ == "__main__":
     main()
