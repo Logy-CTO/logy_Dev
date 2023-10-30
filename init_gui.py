@@ -7,6 +7,7 @@ import PIL.ImageTk
 import subprocess as sp
 import pymysql
 from tkinter import messagebox
+from inference_gui import make_inference_gui
 
 
 from sys import platform
@@ -16,7 +17,7 @@ from pathlib import Path
 from tkinter import Tk, Canvas, Button, PhotoImage, BooleanVar, IntVar, Entry, messagebox
 from PIL import Image, ImageTk
 
-conn = pymysql.connect(host = 'db-iqs5p.pub-cdb.ntruss.com', user = 'user', password = 'vrlogy12@', db = 'vrlogydb', charset = 'utf8')
+conn = pymysql.connect(host = '113.131.111.147', user = 'root', password = 'vrlogy12@', db = 'vrlogydb', charset = 'utf8')
 
 
 def check_username_password(username,password):
@@ -27,7 +28,7 @@ def check_username_password(username,password):
     cur.execute(check_id_sql, (username,)) 
     id_result = cur.fetchone()  # 하나의 행을 가져옴
     # 라이센스 유무 확인
-    check_is_purchased_sql = "select is_purchased from license where member_id in (select username from member_info where username = %s)"
+    check_is_purchased_sql = "select is_purchased from license, member_info where member_id = username AND username = %s"
     cur.execute(check_is_purchased_sql, (username,))
     license_result = cur.fetchone()
     
@@ -36,14 +37,22 @@ def check_username_password(username,password):
         if id_result[0] == password:
             if license_result is not None and license_result[0] == 1:
                 messagebox.showinfo("로그인 성공", "로그인을 성공하였습니다.")
+                pass
+                return make_inference_gui
+
             elif license_result is not None and license_result[0] != 1:
                 messagebox.showerror("라이센스 구매", "라이센스가 없습니다. 홈페이지에서 구매해주시길 바랍니다.")
+                return getparams()
             else:
                 messagebox.showerror("라이센스 오류", "라이센스가 없습니다. 홈페이지에서 구매해주시길 바랍니다.")
+                return getparams()
         else:
             messagebox.showerror("로그인 실패", "로그인에 실패하였습니다.")
+            return getparams() 
     else:
         messagebox.showerror("로그인 실패", "해당 아이디가 존재하지 않습니다.")
+        return getparams()
+    
 
 
 button_image_1 = None
@@ -276,6 +285,9 @@ def getparams():
     member_pw.place(x=209.0, y=355.0, width=253.0, height=42.0)
 
     if param["advanced"]:
+        
+        camera_id.insert(0, param["camid"])
+        
         member_id.pack_forget()
         member_id.insert(0, param["member_id"])
 
@@ -525,6 +537,8 @@ def getparams():
     param["camera_settings"] = False
     param["member_id"] = username
     param["member_pw"] = password
+    param["camera_width"] = 640
+    param["camera_height"] = 480
     param["model_complexity"] = model_complexity
     param["smooth_landmarks"] = mp_smoothing
     param["static_image"] = static_image
