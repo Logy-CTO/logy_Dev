@@ -121,35 +121,7 @@ def main():
             cv2.waitKey(1)
             #end_time = time.time()
             
-            if not coordinates_saved:
-                # 누적된 칼로리값 출력
-                print(f"누적된 칼로리값: {calories_accumulated:.2f} kcal")
-    
-                coordinates_saved = True
-                conn = pymysql.connect(host='113.131.111.147', user='root', password='vrlogy12@', db='vrlogydb', charset='utf8')
-    
-                # 커서 생성
-                cursor = conn.cursor()
-                current_date = datetime.date.today()
-                calories_accumulated = round(calories_accumulated, 2)
-    
-                sql_check = "SELECT COUNT(*) FROM Calorie WHERE member_id = %s"
-                cursor.execute(sql_check, (member_id,))
-                result = cursor.fetchone()
-
-                if result[0] > 0:
-                    sql_update = "UPDATE Calorie SET Calorie = %s, date = %s WHERE member_id = %s"
-                    cursor.execute(sql_update, (calories_accumulated, current_date, member_id))
-                else:
-                    sql_insert = "INSERT INTO Calorie (member_id, Calorie, date) VALUES (%s, %s, %s)"
-                    cursor.execute(sql_insert, (member_id, calories_accumulated, current_date))
-
-                # 변경사항을 커밋
-                conn.commit()
-
-                # 연결 종료
-                cursor.close()
-                conn.close()
+            
 
             continue
         
@@ -232,8 +204,36 @@ def main():
         
         cv2.imshow("out", img)           #show image, exit program if we press esc
         if cv2.waitKey(1) == 27:
-            
-            
+            if not coordinates_saved:
+                # 누적된 칼로리값 출력
+                print(f"누적된 칼로리값: {calories_accumulated:.2f} kcal")
+    
+                coordinates_saved = True
+                conn = pymysql.connect(host='113.131.111.147', user='root', password='vrlogy12@', db='vrlogydb', charset='utf8')
+    
+                # 커서 생성
+                cursor = conn.cursor()
+                current_date = datetime.date.today()
+                calories_accumulated = round(calories_accumulated, 2)
+    
+                sql_check = "SELECT COUNT(*) FROM Calorie WHERE member_id = %s"
+                cursor.execute(sql_check, (member_id,))
+                result = cursor.fetchone()
+
+                if result[0] > 0:
+                    sql_update = "UPDATE Calorie SET Calorie = %s, date = %s WHERE member_id = %s"
+                    cursor.execute(sql_update, (calories_accumulated, current_date, member_id))
+                else:
+                    sql_insert = "INSERT INTO Calorie (member_id, Calorie, date) VALUES (%s, %s, %s)"
+                    cursor.execute(sql_insert, (member_id, calories_accumulated, current_date))
+
+                # 변경사항을 커밋
+                conn.commit()
+
+                # 연결 종료
+                cursor.close()
+                conn.close()
+            params.ready2exit
             backend.disconnect()
             shutdown(params)
 
